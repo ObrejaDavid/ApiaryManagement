@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<DialogPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.apiary.controller.HoneyProductDialogController"
+            prefWidth="500.0" prefHeight="450.0"
+            stylesheets="/css/styles.css">
+    <content>
+        <VBox spacing="15">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <GridPane hgap="10" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="NEVER" minWidth="120" prefWidth="120"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="300"/>
+                </columnConstraints>
+
+                <Label text="Product Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="productNameField" promptText="Enter product name"
+                           GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="Apiary:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="apiaryComboBox" promptText="Select apiary" maxWidth="Infinity"
+                          GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                <Label text="Hive (Optional):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="hiveComboBox" promptText="Select hive (optional)" maxWidth="Infinity"
+                          GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                <Label text="Price (RON):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                <TextField fx:id="priceField" promptText="Enter price"
+                           GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                <Label text="Quantity (kg):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                <TextField fx:id="quantityField" promptText="Enter quantity"
+                           GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                <Label text="Description:" GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP">
+                    <GridPane.margin>
+                        <Insets top="5" />
+                    </GridPane.margin>
+                </Label>
+                <TextArea fx:id="descriptionField" promptText="Enter product description"
+                          wrapText="true" prefHeight="100"
+                          GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+                <Label text="Honey Type:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="honeyTypeComboBox" promptText="Select honey type" maxWidth="Infinity"
+                          GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+                <Label text="Harvest Date:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                <DatePicker fx:id="harvestDatePicker" promptText="Select harvest date" maxWidth="Infinity"
+                            GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+            </GridPane>
+        </VBox>
+    </content>
+
+    <buttonTypes>
+        <ButtonType fx:constant="SAVE"/>
+        <ButtonType fx:constant="CANCEL"/>
+    </buttonTypes>
+</DialogPane>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.apiary.controller.LoginController"
+            prefHeight="500.0" prefWidth="700.0"
+            stylesheets="/css/styles.css">
+    <top>
+        <HBox alignment="CENTER" spacing="10" styleClass="header-box">
+            <padding>
+                <Insets top="20" right="20" bottom="20" left="20"/>
+            </padding>
+            <Label text="Apiary Management System" styleClass="app-title">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
+        </HBox>
+    </top>
+
+    <center>
+        <StackPane>
+            <!-- Login Form -->
+            <VBox fx:id="loginForm" alignment="CENTER" spacing="15" maxWidth="400" visible="true" managed="true">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20"/>
+                </padding>
+
+                <Text text="Login to Your Account" styleClass="section-title"/>
+                <Separator/>
+
+                <GridPane hgap="10" vgap="10">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="NEVER" minWidth="100" prefWidth="100"/>
+                        <ColumnConstraints hgrow="ALWAYS" minWidth="200"/>
+                    </columnConstraints>
+
+                    <Label text="Username:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="loginUsername" promptText="Enter your username"
+                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                    <Label text="Password:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <PasswordField fx:id="loginPassword" promptText="Enter your password"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                </GridPane>
+
+                <Button fx:id="loginButton" text="Login" styleClass="primary-button" maxWidth="Infinity"/>
+
+                <HBox alignment="CENTER" spacing="5">
+                    <Label text="Don't have an account?"/>
+                    <Button fx:id="showSignupButton" text="Sign Up" styleClass="link-button"
+                            onAction="#toggleForms"/>
+                </HBox>
+            </VBox>
+
+            <!-- Signup Form -->
+            <VBox fx:id="signupForm" alignment="CENTER" spacing="15" maxWidth="400" visible="false" managed="false">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20"/>
+                </padding>
+
+                <Text text="Create an Account" styleClass="section-title"/>
+                <Separator/>
+
+                <GridPane hgap="10" vgap="10">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="NEVER" minWidth="120" prefWidth="120"/>
+                        <ColumnConstraints hgrow="ALWAYS" minWidth="200"/>
+                    </columnConstraints>
+
+                    <Label text="Username:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="signupUsername" promptText="Choose a username"
+                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                    <Label text="Password:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <PasswordField fx:id="signupPassword" promptText="Create a password"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                    <Label text="Confirm Password:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <PasswordField fx:id="signupConfirmPassword" promptText="Confirm your password"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                    <Label text="Full Name:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                    <TextField fx:id="signupFullName" promptText="Enter your full name"
+                               GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                    <Label text="Email:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                    <TextField fx:id="signupEmail" promptText="Enter your email"
+                               GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                    <Label text="Phone:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                    <TextField fx:id="signupPhone" promptText="Enter your phone number"
+                               GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+                    <Label text="Address:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                    <TextArea fx:id="signupAddress" promptText="Enter your address" prefHeight="60"
+                              GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+                    <Label text="Account Type:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                    <HBox spacing="10" GridPane.rowIndex="7" GridPane.columnIndex="1">
+                        <RadioButton fx:id="clientRadioButton" text="Client" selected="true">
+                            <toggleGroup>
+                                <ToggleGroup fx:id="accountTypeToggle"/>
+                            </toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="beekeeperRadioButton" text="Beekeeper" toggleGroup="$accountTypeToggle"/>
+                    </HBox>
+
+                    <!-- Beekeeper-specific fields (only visible when beekeeper is selected) -->
+                    <Label fx:id="yearsExperienceLabel" text="Years Experience:" visible="false"
+                           GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+                    <Spinner fx:id="yearsExperienceSpinner" min="0" max="100" initialValue="0"
+                             visible="false" prefWidth="100" editable="true"
+                             GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+                </GridPane>
+
+                <Button fx:id="signupButton" text="Create Account" styleClass="primary-button" maxWidth="Infinity"/>
+
+                <HBox alignment="CENTER" spacing="5">
+                    <Label text="Already have an account?"/>
+                    <Button fx:id="showLoginButton" text="Login" styleClass="link-button"
+                            onAction="#toggleForms"/>
+                </HBox>
+            </VBox>
+        </StackPane>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER" spacing="10" styleClass="footer">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Text text="© 2025 Apiary Management System" styleClass="footer-text"/>
+        </HBox>
+    </bottom>
+</BorderPane>

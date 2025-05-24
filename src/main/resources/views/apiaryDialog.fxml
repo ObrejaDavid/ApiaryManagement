@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<DialogPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.apiary.controller.ApiaryDialogController"
+            prefWidth="450.0" prefHeight="300.0"
+            stylesheets="/css/styles.css">
+    <content>
+        <VBox spacing="15">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <GridPane hgap="10" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="NEVER" minWidth="100" prefWidth="100"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="200"/>
+                </columnConstraints>
+
+                <rowConstraints>
+                    <RowConstraints minHeight="30" vgrow="SOMETIMES"/>
+                    <RowConstraints minHeight="30" vgrow="SOMETIMES"/>
+                    <RowConstraints minHeight="80" vgrow="SOMETIMES"/>
+                </rowConstraints>
+
+                <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="apiaryNameField" promptText="Enter apiary name"
+                           GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="Location:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <TextField fx:id="apiaryLocationField" promptText="Enter apiary location"
+                           GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                <Label text="Description:" GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.valignment="TOP">
+                    <GridPane.margin>
+                        <Insets top="5" />
+                    </GridPane.margin>
+                </Label>
+                <TextArea fx:id="apiaryDescriptionField" promptText="Enter apiary description (optional)"
+                          wrapText="true" prefHeight="80"
+                          GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            </GridPane>
+        </VBox>
+    </content>
+
+    <buttonTypes>
+        <ButtonType fx:constant="SAVE"/>
+        <ButtonType fx:constant="CANCEL"/>
+    </buttonTypes>
+</DialogPane>

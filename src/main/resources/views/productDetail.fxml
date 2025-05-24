@@ -1,14 +1,134 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.image.ImageView?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
+<BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="$CONTROLLER_NAME$"
-            prefHeight="400.0" prefWidth="600.0" >
+            fx:controller="org.apiary.controller.ProductDetailController"
+            prefHeight="600.0" prefWidth="800.0"
+            stylesheets="/css/styles.css">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="10" styleClass="header-box">
+            <padding>
+                <Insets top="10" right="20" bottom="10" left="20"/>
+            </padding>
+            <Button text="« Back" onAction="#handleBack"/>
+            <Label text="Product Details" styleClass="app-title">
+                <font>
+                    <Font name="System Bold" size="18.0"/>
+                </font>
+            </Label>
+        </HBox>
+    </top>
 
-</AnchorPane>
+    <center>
+        <ScrollPane fitToWidth="true">
+            <VBox spacing="20">
+                <padding>
+                    <Insets top="20" right="30" bottom="20" left="30"/>
+                </padding>
+
+                <HBox spacing="30" alignment="CENTER_LEFT">
+                    <!-- Product Image -->
+                    <VBox alignment="TOP_CENTER" spacing="10" minWidth="250">
+                        <ImageView fx:id="productImage" fitWidth="250" fitHeight="250" preserveRatio="true"/>
+                        <Label fx:id="productTypeLabel" text="[Honey Type]" styleClass="product-type-label"/>
+                    </VBox>
+
+                    <!-- Product Info -->
+                    <VBox spacing="15" HBox.hgrow="ALWAYS">
+                        <Label fx:id="productNameLabel" text="[Product Name]" styleClass="product-title">
+                            <font>
+                                <Font name="System Bold" size="22.0"/>
+                            </font>
+                        </Label>
+
+                        <HBox spacing="20">
+                            <Label text="Price:" styleClass="info-label"/>
+                            <Label fx:id="productPriceLabel" text="[Price] RON" styleClass="price-label"/>
+                        </HBox>
+
+                        <HBox spacing="20">
+                            <Label text="Availability:" styleClass="info-label"/>
+                            <Label fx:id="productAvailabilityLabel" text="[Availability]" styleClass="availability-label"/>
+                        </HBox>
+
+                        <HBox spacing="20" alignment="CENTER_LEFT">
+                            <Label text="Quantity:" styleClass="info-label"/>
+                            <Spinner fx:id="quantitySpinner" prefWidth="80" editable="true">
+                                <valueFactory>
+                                    <SpinnerValueFactory.IntegerSpinnerValueFactory min="1" max="100" initialValue="1"/>
+                                </valueFactory>
+                            </Spinner>
+                            <Button text="Add to Cart" onAction="#handleAddToCart" styleClass="primary-button"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+
+                <Separator/>
+
+                <!-- Product Description -->
+                <VBox spacing="10">
+                    <Label text="Description" styleClass="subsection-title"/>
+                    <TextFlow fx:id="productDescriptionFlow">
+                        <Text fx:id="productDescriptionText" text="[Product Description]" wrappingWidth="740"/>
+                    </TextFlow>
+                </VBox>
+
+                <Separator/>
+
+                <!-- Apiary Info -->
+                <VBox spacing="10">
+                    <Label text="From the Apiary" styleClass="subsection-title"/>
+
+                    <GridPane hgap="20" vgap="10">
+                        <columnConstraints>
+                            <ColumnConstraints hgrow="NEVER" minWidth="120" prefWidth="120"/>
+                            <ColumnConstraints hgrow="ALWAYS" minWidth="200"/>
+                        </columnConstraints>
+
+                        <Label text="Apiary:" styleClass="info-label"
+                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <Label fx:id="apiaryNameLabel" text="[Apiary Name]"
+                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Location:" styleClass="info-label"
+                               GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <Label fx:id="apiaryLocationLabel" text="[Apiary Location]"
+                               GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Harvest Date:" styleClass="info-label"
+                               GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <Label fx:id="harvestDateLabel" text="[Harvest Date]"
+                               GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                    </GridPane>
+                </VBox>
+
+                <Separator/>
+
+                <!-- Related Products -->
+                <VBox spacing="10">
+                    <Label text="You Might Also Like" styleClass="subsection-title"/>
+
+                    <HBox fx:id="relatedProductsContainer" spacing="15">
+                        <!-- Related products will be added here dynamically -->
+                    </HBox>
+                </VBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER" spacing="10" styleClass="footer">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Text text="© 2025 Apiary Management System" styleClass="footer-text"/>
+        </HBox>
+    </bottom>
+</BorderPane>

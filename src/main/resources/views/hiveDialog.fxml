@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<DialogPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.apiary.controller.HiveDialogController"
+            prefWidth="450.0" prefHeight="300.0"
+            stylesheets="/css/styles.css">
+    <content>
+        <VBox spacing="15">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <GridPane hgap="10" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="NEVER" minWidth="120" prefWidth="120"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="200"/>
+                </columnConstraints>
+
+                <Label text="Apiary:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="apiaryComboBox" promptText="Select apiary" maxWidth="Infinity"
+                          GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="Hive Number:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <Spinner fx:id="hiveNumberSpinner" editable="true" min="1" max="9999" initialValue="1"
+                         GridPane.rowIndex="1" GridPane.columnIndex="1">
+                    <valueFactory>
+                        <SpinnerValueFactory.IntegerSpinnerValueFactory min="1" max="9999" initialValue="1"/>
+                    </valueFactory>
+                </Spinner>
+
+                <Label text="Queen Year:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                <Spinner fx:id="queenYearSpinner" editable="true" min="2000" max="2050"
+                         GridPane.rowIndex="2" GridPane.columnIndex="1">
+                    <valueFactory>
+                        <SpinnerValueFactory.IntegerSpinnerValueFactory min="2000" max="2050"
+                                                                        initialValue="2023"/>
+                    </valueFactory>
+                </Spinner>
+
+                <Label text="Notes:" GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP">
+                    <GridPane.margin>
+                        <Insets top="5" />
+                    </GridPane.margin>
+                </Label>
+                <TextArea fx:id="hiveNotesField" promptText="Enter notes (optional)"
+                          wrapText="true" prefHeight="80"
+                          GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+            </GridPane>
+        </VBox>
+    </content>
+
+    <buttonTypes>
+        <ButtonType fx:constant="SAVE"/>
+        <ButtonType fx:constant="CANCEL"/>
+    </buttonTypes>
+</DialogPane>

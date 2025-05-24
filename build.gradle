@@ -1,17 +1,40 @@
 plugins {
     id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.10'
 }
 
-group = 'org.example'
-version = '1.0-SNAPSHOT'
+group 'org.apiary'
+version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+
 }
 
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+    // JavaFX dependencies are managed by the plugin
+
+    // Hibernate and database
+    implementation 'org.hibernate:hibernate-core:5.6.10.Final'
+    implementation 'com.microsoft.sqlserver:mssql-jdbc:10.2.1.jre11'
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:1.7.36'
+    implementation 'ch.qos.logback:logback-classic:1.5.13'
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+application {
+    mainClassName = 'org.apiary.Main'
+}
+
+javafx {
+    version = "17.0.2"
+    modules = ['javafx.controls', 'javafx.fxml']
 }
 
 test {
