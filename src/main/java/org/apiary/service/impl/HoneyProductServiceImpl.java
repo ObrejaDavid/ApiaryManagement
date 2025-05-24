@@ -8,12 +8,16 @@ import org.apiary.repository.interfaces.HoneyProductRepository;
 import org.apiary.service.interfaces.ApiaryService;
 import org.apiary.service.interfaces.HiveService;
 import org.apiary.service.interfaces.HoneyProductService;
+import org.apiary.utils.pagination.Page;
+import org.apiary.utils.pagination.Pageable;
+import org.apiary.utils.pagination.PaginationUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class HoneyProductServiceImpl implements HoneyProductService {
 
@@ -255,6 +259,114 @@ public class HoneyProductServiceImpl implements HoneyProductService {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error updating quantity for honey product: " + productId, e);
             return false;
+        }
+    }
+
+    @Override
+    public long countProductsByApiary(Integer apiaryId) {
+        try {
+            Optional<Apiary> apiaryOpt = apiaryService.findById(apiaryId);
+            if (apiaryOpt.isEmpty()) {
+                return 0;
+            }
+            return honeyProductRepository.findByApiary(apiaryOpt.get()).size();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error counting products by apiary: " + apiaryId, e);
+            return 0;
+        }
+    }
+
+    @Override
+    public long countProductsByHive(Integer hiveId) {
+        try {
+            Optional<Hive> hiveOpt = hiveService.findById(hiveId);
+            if (hiveOpt.isEmpty()) {
+                return 0;
+            }
+            return honeyProductRepository.findByHive(hiveOpt.get()).size();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error counting products by hive: " + hiveId, e);
+            return 0;
+        }
+    }
+
+    @Override
+    public List<HoneyProduct> findByBeekeeper(Beekeeper beekeeper) {
+        try {
+            List<Apiary> apiaries = apiaryService.findByBeekeeper(beekeeper);
+            return apiaries.stream()
+                    .flatMap(apiary -> honeyProductRepository.findByApiary(apiary).stream())
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding products by beekeeper: " + beekeeper.getUsername(), e);
+            return List.of();
+        }
+    }
+
+    @Override
+    public Page<HoneyProduct> findByFilters(String category, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        try {
+            List<HoneyProduct> allProducts = honeyProductRepository.findAll();
+
+            // Apply filters
+            List<HoneyProduct> filteredProducts = allProducts.stream()
+                    .filter(product -> {
+                        if (category != null && !product.getName().toLowerCase().contains(category.toLowerCase())) {
+                            return false;
+                        }
+                        if (minPrice != null && product.getPrice().compareTo(minPrice) < 0) {
+                            return false;
+                        }
+                        if (maxPrice != null && product.getPrice().compareTo(maxPrice) > 0) {
+                            return false;
+                        }
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+
+            return PaginationUtils.createPage(filteredProducts, pageable);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding products by filters", e);
+            return new Page<>(List.of(), pageable.getPage(), pageable.getSize(), 0);
+        }
+    }
+
+    @Override
+    public Page<HoneyProduct> findAvailableProducts(Pageable pageable) {
+        try {
+            List<HoneyProduct> availableProducts = honeyProductRepository.findAvailableProducts();
+            return PaginationUtils.createPage(availableProducts, pageable);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding available products", e);
+            return new Page<>(List.of(), pageable.getPage(), pageable.getSize(), 0);
+        }
+    }
+
+    @Override
+    public Page<HoneyProduct> findByNameContaining(String name, String category, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        try {
+            List<HoneyProduct> allProducts = honeyProductRepository.findByNameContaining(name);
+
+            // Apply additional filters
+            List<HoneyProduct> filteredProducts = allProducts.stream()
+                    .filter(product -> {
+                        if (category != null && !product.getName().toLowerCase().contains(category.toLowerCase())) {
+                            return false;
+                        }
+                        if (minPrice != null && product.getPrice().compareTo(minPrice) < 0) {
+                            return false;
+                        }
+                        if (maxPrice != null && product.getPrice().compareTo(maxPrice) > 0) {
+                            return false;
+                        }
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+
+            return PaginationUtils.createPage(filteredProducts, pageable);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding products by name containing: " + name, e);
+            return new Page<>(List.of(), pageable.getPage(), pageable.getSize(), 0);
         }
     }
 }

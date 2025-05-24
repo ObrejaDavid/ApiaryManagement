@@ -382,4 +382,55 @@ public class UserServiceImpl implements UserService {
             return false;
         }
     }
+
+    @Override
+    public boolean verifyPassword(String username, String password) {
+        try {
+            Optional<User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                return PasswordUtils.verifyPassword(password, user.getPassword());
+            }
+            return false;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error verifying password for user: " + username, e);
+            return false;
+        }
+    }
+
+    @Override
+    public User updateUserProfile(Integer userId, String fullName, String email, String phone, String newPassword) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                throw new IllegalArgumentException("User not found");
+            }
+
+            User user = userOpt.get();
+
+            // Update specific fields based on user type
+            if (user instanceof Client) {
+                Client client = (Client) user;
+                client.setFullName(fullName);
+                client.setEmail(email);
+                client.setPhone(phone);
+            } else if (user instanceof Beekeeper) {
+                Beekeeper beekeeper = (Beekeeper) user;
+                beekeeper.setPhone(phone);
+                beekeeper.setAddress(email); // Using email field for address in this case
+            }
+
+            // Update password if provided
+            if (!StringUtils.isBlank(newPassword)) {
+                user.setPassword(PasswordUtils.hashPassword(newPassword));
+            }
+
+            User savedUser = userRepository.save(user);
+            LOGGER.info("Updated user profile: " + user.getUsername());
+            return savedUser;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating user profile: " + userId, e);
+            return null;
+        }
+    }
 }

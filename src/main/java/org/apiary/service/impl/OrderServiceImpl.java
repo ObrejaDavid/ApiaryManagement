@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class OrderServiceImpl implements OrderService {
 
@@ -293,6 +294,50 @@ public class OrderServiceImpl implements OrderService {
                 return false; // Cannot transition from delivered
             default:
                 return false;
+        }
+    }
+
+    @Override
+    public List<Order> findOrdersForBeekeeper(Beekeeper beekeeper) {
+        try {
+            List<Order> allOrders = orderRepository.findAll();
+            return allOrders.stream()
+                    .filter(order -> {
+                        return order.getItems().stream()
+                                .anyMatch(item -> {
+                                    Apiary apiary = item.getProduct().getApiary();
+                                    return apiary.getBeekeeper().equals(beekeeper);
+                                });
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding orders for beekeeper: " + beekeeper.getUsername(), e);
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<Order> findOrdersWithFilters(Beekeeper beekeeper, String status, LocalDateTime startDate, LocalDateTime endDate) {
+        try {
+            List<Order> beekeeperOrders = findOrdersForBeekeeper(beekeeper);
+
+            return beekeeperOrders.stream()
+                    .filter(order -> {
+                        if (status != null && !order.getStatus().equals(status)) {
+                            return false;
+                        }
+                        if (startDate != null && order.getDate().isBefore(startDate)) {
+                            return false;
+                        }
+                        if (endDate != null && order.getDate().isAfter(endDate)) {
+                            return false;
+                        }
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding orders with filters for beekeeper: " + beekeeper.getUsername(), e);
+            return List.of();
         }
     }
 }

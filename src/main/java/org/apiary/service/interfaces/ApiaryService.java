@@ -68,4 +68,17 @@ public interface ApiaryService {
      * @return true if the beekeeper owns the apiary, false otherwise
      */
     boolean isApiaryOwnedByBeekeeper(Beekeeper beekeeper, Integer apiaryId);
+
+
+    /**
+     * Find all apiaries
+     * @return A list of all apiaries
+     */
+    List<Apiary> findAll();
+
+    /**
+     * Find all unique locations
+     * @return A list of unique apiary locations
+     */
+    List<String> findAllLocations();
 }

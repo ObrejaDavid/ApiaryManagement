@@ -96,4 +96,23 @@ public interface UserService {
      * @return true if the user was deleted successfully, false otherwise
      */
     boolean deleteUser(String username);
+
+    /**
+     * Verify a user's password
+     * @param username The username
+     * @param password The password to verify
+     * @return true if the password is correct, false otherwise
+     */
+    boolean verifyPassword(String username, String password);
+
+    /**
+     * Update user profile
+     * @param userId The user ID
+     * @param fullName The full name
+     * @param email The email
+     * @param phone The phone number
+     * @param newPassword The new password (optional)
+     * @return The updated user
+     */
+    User updateUserProfile(Integer userId, String fullName, String email, String phone, String newPassword);
 }

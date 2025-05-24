@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class ApiaryServiceImpl implements ApiaryService {
 
@@ -129,6 +130,30 @@ public class ApiaryServiceImpl implements ApiaryService {
             LOGGER.log(Level.SEVERE, "Error checking if apiary is owned by beekeeper: " +
                     apiaryId + ", " + beekeeper.getUsername(), e);
             return false;
+        }
+    }
+
+    @Override
+    public List<Apiary> findAll() {
+        try {
+            return apiaryRepository.findAll();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding all apiaries", e);
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<String> findAllLocations() {
+        try {
+            return apiaryRepository.findAll().stream()
+                    .map(Apiary::getLocation)
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding all locations", e);
+            return List.of();
         }
     }
 }

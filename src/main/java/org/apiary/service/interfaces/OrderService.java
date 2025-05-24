@@ -1,5 +1,6 @@
 package org.apiary.service.interfaces;
 
+import org.apiary.model.Beekeeper;
 import org.apiary.model.Client;
 import org.apiary.model.Order;
 import org.apiary.model.OrderItem;
@@ -88,4 +89,21 @@ public interface OrderService {
      * @return true if the order was canceled successfully, false otherwise
      */
     boolean cancelOrder(Integer orderId, Client client);
+
+    /**
+     * Find orders for a beekeeper's products
+     * @param beekeeper The beekeeper
+     * @return A list of orders containing the beekeeper's products
+     */
+    List<Order> findOrdersForBeekeeper(Beekeeper beekeeper);
+
+    /**
+     * Find orders with filters
+     * @param beekeeper The beekeeper
+     * @param status The status filter
+     * @param startDate The start date filter
+     * @param endDate The end date filter
+     * @return A list of filtered orders
+     */
+    List<Order> findOrdersWithFilters(Beekeeper beekeeper, String status, LocalDateTime startDate, LocalDateTime endDate);
 }

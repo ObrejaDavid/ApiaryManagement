@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+    <session-factory>
+        <!-- Database connection properties -->
+        <property name="hibernate.connection.driver_class">com.microsoft.sqlserver.jdbc.SQLServerDriver</property>
+        <property name="hibernate.connection.url">jdbc:sqlserver://localhost:1433;databaseName=ApiaryManagement;trustServerCertificate=true</property>
+        <property name="hibernate.connection.username">sa</property>
+        <property name="hibernate.connection.password">your_password</property>
+
+        <!-- SQL dialect -->
+        <property name="hibernate.dialect">org.hibernate.dialect.SQLServer2012Dialect</property>
+
+        <!-- Echo all executed SQL to stdout -->
+        <property name="hibernate.show_sql">true</property>
+        <property name="hibernate.format_sql">true</property>
+
+        <!-- Drop and re-create the database schema on startup -->
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <!-- Connection pool -->
+        <property name="hibernate.connection.pool_size">10</property>
+
+        <!-- Current session context -->
+        <property name="hibernate.current_session_context_class">thread</property>
+
+        <!-- Mapping classes -->
+        <mapping class="org.apiary.model.User"/>
+        <mapping class="org.apiary.model.Client"/>
+        <mapping class="org.apiary.model.Beekeeper"/>
+        <mapping class="org.apiary.model.Apiary"/>
+        <mapping class="org.apiary.model.Hive"/>
+        <mapping class="org.apiary.model.HoneyProduct"/>
+        <mapping class="org.apiary.model.ShoppingCart"/>
+        <mapping class="org.apiary.model.CartItem"/>
+        <mapping class="org.apiary.model.Order"/>
+        <mapping class="org.apiary.model.OrderItem"/>
+        <mapping class="org.apiary.model.Payment"/>
+    </session-factory>
+</hibernate-configuration>

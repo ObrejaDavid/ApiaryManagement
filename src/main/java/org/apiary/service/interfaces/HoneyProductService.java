@@ -4,6 +4,8 @@ import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
 import org.apiary.model.Hive;
 import org.apiary.model.HoneyProduct;
+import org.apiary.utils.pagination.Page;
+import org.apiary.utils.pagination.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -123,4 +125,54 @@ public interface HoneyProductService {
      * @return true if the quantity was updated successfully, false otherwise
      */
     boolean updateQuantityAfterPurchase(Integer productId, BigDecimal quantityToSubtract);
+
+    /**
+     * Count honey products by apiary
+     * @param apiaryId The apiary ID
+     * @return The count of products
+     */
+    long countProductsByApiary(Integer apiaryId);
+
+    /**
+     * Count honey products by hive
+     * @param hiveId The hive ID
+     * @return The count of products
+     */
+    long countProductsByHive(Integer hiveId);
+
+    /**
+     * Find honey products by beekeeper
+     * @param beekeeper The beekeeper
+     * @return A list of honey products
+     */
+    List<HoneyProduct> findByBeekeeper(Beekeeper beekeeper);
+
+    /**
+     * Find honey products with pagination and filters
+     * @param category The category filter
+     * @param minPrice The minimum price
+     * @param maxPrice The maximum price
+     * @param pageable The pagination information
+     * @return A page of honey products
+     */
+    Page<HoneyProduct> findByFilters(String category, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+
+    /**
+     * Find available products with pagination
+     * @param pageable The pagination information
+     * @return A page of available honey products
+     */
+    Page<HoneyProduct> findAvailableProducts(Pageable pageable);
+
+    /**
+     * Find products by name containing with pagination and filters
+     * @param name The name to search for
+     * @param category The category filter
+     * @param minPrice The minimum price
+     * @param maxPrice The maximum price
+     * @param pageable The pagination information
+     * @return A page of honey products
+     */
+    Page<HoneyProduct> findByNameContaining(String name, String category, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+
 }

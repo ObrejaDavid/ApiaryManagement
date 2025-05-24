@@ -17,11 +17,16 @@ dependencies {
 
     // Hibernate and database
     implementation 'org.hibernate:hibernate-core:5.6.10.Final'
+    implementation 'org.hibernate:hibernate-c3p0:5.6.10.Final'
     implementation 'com.microsoft.sqlserver:mssql-jdbc:10.2.1.jre11'
 
     // Logging
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'ch.qos.logback:logback-classic:1.5.13'
+
+    // Validation
+    implementation 'javax.validation:validation-api:2.0.1.Final'
+    implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
 
     // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
