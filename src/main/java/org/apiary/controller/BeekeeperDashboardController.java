@@ -21,6 +21,7 @@ import org.apiary.service.interfaces.HiveService;
 import org.apiary.service.interfaces.HoneyProductService;
 import org.apiary.service.interfaces.OrderService;
 import org.apiary.utils.StringUtils;
+import org.apiary.utils.ValidationUtils;
 import org.apiary.utils.events.EntityChangeEvent;
 import org.apiary.utils.observer.Observer;
 
@@ -38,88 +39,51 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     private static final Logger LOGGER = Logger.getLogger(BeekeeperDashboardController.class.getName());
 
     // FXML controls
-    @FXML
-    private Label welcomeLabel;
-    @FXML
-    private TabPane mainTabPane;
+    @FXML private Label welcomeLabel;
+    @FXML private TabPane mainTabPane;
 
     // Apiaries tab controls
-    @FXML
-    private TableView<Apiary> apiariesTable;
-    @FXML
-    private TableColumn<Apiary, Integer> apiaryIdColumn;
-    @FXML
-    private TableColumn<Apiary, String> apiaryNameColumn;
-    @FXML
-    private TableColumn<Apiary, String> apiaryLocationColumn;
-    @FXML
-    private TableColumn<Apiary, Integer> apiaryHivesCountColumn;
-    @FXML
-    private TableColumn<Apiary, Integer> apiaryProductsCountColumn;
-    @FXML
-    private TableColumn<Apiary, Void> apiaryActionsColumn;
+    @FXML private TableView<Apiary> apiariesTable;
+    @FXML private TableColumn<Apiary, Integer> apiaryIdColumn;
+    @FXML private TableColumn<Apiary, String> apiaryNameColumn;
+    @FXML private TableColumn<Apiary, String> apiaryLocationColumn;
+    @FXML private TableColumn<Apiary, Integer> apiaryHivesCountColumn;
+    @FXML private TableColumn<Apiary, Integer> apiaryProductsCountColumn;
+    @FXML private TableColumn<Apiary, Void> apiaryActionsColumn;
 
     // Hives tab controls
-    @FXML
-    private ComboBox<Apiary> apiaryFilterComboBox;
-    @FXML
-    private TableView<Hive> hivesTable;
-    @FXML
-    private TableColumn<Hive, Integer> hiveIdColumn;
-    @FXML
-    private TableColumn<Hive, Integer> hiveNumberColumn;
-    @FXML
-    private TableColumn<Hive, String> hiveApiaryColumn;
-    @FXML
-    private TableColumn<Hive, Integer> hiveQueenYearColumn;
-    @FXML
-    private TableColumn<Hive, Integer> hiveProductsCountColumn;
-    @FXML
-    private TableColumn<Hive, Void> hiveActionsColumn;
+    @FXML private ComboBox<Apiary> apiaryFilterComboBox;
+    @FXML private TableView<Hive> hivesTable;
+    @FXML private TableColumn<Hive, Integer> hiveIdColumn;
+    @FXML private TableColumn<Hive, Integer> hiveNumberColumn;
+    @FXML private TableColumn<Hive, String> hiveApiaryColumn;
+    @FXML private TableColumn<Hive, Integer> hiveQueenYearColumn;
+    @FXML private TableColumn<Hive, Integer> hiveProductsCountColumn;
+    @FXML private TableColumn<Hive, Void> hiveActionsColumn;
 
     // Products tab controls
-    @FXML
-    private ComboBox<Apiary> productApiaryFilterComboBox;
-    @FXML
-    private ComboBox<Hive> productHiveFilterComboBox;
-    @FXML
-    private TableView<HoneyProduct> productsTable;
-    @FXML
-    private TableColumn<HoneyProduct, Integer> productIdColumn;
-    @FXML
-    private TableColumn<HoneyProduct, String> productNameColumn;
-    @FXML
-    private TableColumn<HoneyProduct, String> productApiaryColumn;
-    @FXML
-    private TableColumn<HoneyProduct, String> productHiveColumn;
-    @FXML
-    private TableColumn<HoneyProduct, BigDecimal> productPriceColumn;
-    @FXML
-    private TableColumn<HoneyProduct, BigDecimal> productQuantityColumn;
-    @FXML
-    private TableColumn<HoneyProduct, Void> productActionsColumn;
+    @FXML private ComboBox<Apiary> productApiaryFilterComboBox;
+    @FXML private ComboBox<Hive> productHiveFilterComboBox;
+    @FXML private TableView<HoneyProduct> productsTable;
+    @FXML private TableColumn<HoneyProduct, Integer> productIdColumn;
+    @FXML private TableColumn<HoneyProduct, String> productNameColumn;
+    @FXML private TableColumn<HoneyProduct, String> productApiaryColumn;
+    @FXML private TableColumn<HoneyProduct, String> productHiveColumn;
+    @FXML private TableColumn<HoneyProduct, BigDecimal> productPriceColumn;
+    @FXML private TableColumn<HoneyProduct, BigDecimal> productQuantityColumn;
+    @FXML private TableColumn<HoneyProduct, Void> productActionsColumn;
 
     // Orders tab controls
-    @FXML
-    private ComboBox<String> orderStatusFilterComboBox;
-    @FXML
-    private DatePicker orderStartDatePicker;
-    @FXML
-    private DatePicker orderEndDatePicker;
-    @FXML
-    private TableView<Order> ordersTable;
-    @FXML
-    private TableColumn<Order, Integer> orderIdColumn;
-    @FXML
-    private TableColumn<Order, LocalDateTime> orderDateColumn;
-    @FXML
-    private TableColumn<Order, String> orderCustomerColumn;
-    @FXML
-    private TableColumn<Order, String> orderProductsColumn;
-    @FXML
-    private TableColumn<Order, BigDecimal> orderTotalColumn;
-    @FXML
-    private TableColumn<Order, String> orderStatusColumn;
+    @FXML private ComboBox<String> orderStatusFilterComboBox;
+    @FXML private DatePicker orderStartDatePicker;
+    @FXML private DatePicker orderEndDatePicker;
+    @FXML private TableView<Order> ordersTable;
+    @FXML private TableColumn<Order, Integer> orderIdColumn;
+    @FXML private TableColumn<Order, LocalDateTime> orderDateColumn;
+    @FXML private TableColumn<Order, String> orderCustomerColumn;
+    @FXML private TableColumn<Order, String> orderProductsColumn;
+    @FXML private TableColumn<Order, BigDecimal> orderTotalColumn;
+    @FXML private TableColumn<Order, String> orderStatusColumn;
 
     // Model
     private Beekeeper beekeeper;
@@ -232,7 +196,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Apiary apiary = cellData.getValue();
             return javafx.beans.binding.Bindings.createObjectBinding(() -> {
                 try {
-                    return hiveService.countByApiary(apiary.getApiaryId());
+                    return (int) hiveService.countByApiary(apiary);
                 } catch (Exception e) {
                     return 0;
                 }
@@ -243,7 +207,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Apiary apiary = cellData.getValue();
             return javafx.beans.binding.Bindings.createObjectBinding(() -> {
                 try {
-                    return honeyProductService.countProductsByApiary(apiary.getApiaryId());
+                    return (int) honeyProductService.countProductsByApiary(apiary.getApiaryId());
                 } catch (Exception e) {
                     return 0;
                 }
@@ -295,7 +259,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Hive hive = cellData.getValue();
             return javafx.beans.binding.Bindings.createObjectBinding(() -> {
                 try {
-                    return honeyProductService.countProductsByHive(hive.getHiveId());
+                    return (int) honeyProductService.countProductsByHive(hive.getHiveId());
                 } catch (Exception e) {
                     return 0;
                 }
@@ -462,6 +426,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         });
     }
 
+    // Load data methods
     private void loadApiaries() {
         try {
             List<Apiary> beekeeperApiaries = apiaryService.findByBeekeeper(beekeeper);
@@ -595,6 +560,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         }
     }
 
+    // Navigation methods
     @FXML
     private void handleFilterOrders() {
         loadOrders();
@@ -625,6 +591,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         mainTabPane.getSelectionModel().select(4);
     }
 
+    // CRUD operations
     @FXML
     private void handleAddApiary() {
         try {
@@ -639,7 +606,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             dialog.setTitle("Add New Apiary");
 
             dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.SAVE) {
+                if (buttonType == ButtonType.OK) {
                     return controller.getApiary();
                 }
                 return null;
@@ -686,7 +653,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             dialog.setTitle("Edit Apiary");
 
             dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.SAVE) {
+                if (buttonType == ButtonType.OK) {
                     return controller.getApiary();
                 }
                 return null;
@@ -772,7 +739,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             dialog.setTitle("Add New Hive");
 
             dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.SAVE) {
+                if (buttonType == ButtonType.OK) {
                     return controller.getHive();
                 }
                 return null;
@@ -822,7 +789,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             dialog.setTitle("Edit Hive");
 
             dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.SAVE) {
+                if (buttonType == ButtonType.OK) {
                     return controller.getHive();
                 }
                 return null;
@@ -908,7 +875,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             dialog.setTitle("Add New Honey Product");
 
             dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.SAVE) {
+                if (buttonType == ButtonType.OK) {
                     return controller.getProduct();
                 }
                 return null;
@@ -961,7 +928,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             dialog.setTitle("Edit Honey Product");
 
             dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.SAVE) {
+                if (buttonType == ButtonType.OK) {
                     return controller.getProduct();
                 }
                 return null;
@@ -1031,20 +998,24 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     private void handleGenerateSalesReport() {
         // Implementation for sales report generation
         // This would populate the salesReportTable with data
+        showAlert(Alert.AlertType.INFORMATION, "Feature Coming Soon",
+                "Sales report generation will be implemented in a future version.");
     }
 
     @FXML
     private void handleGenerateProductionReport() {
         // Implementation for production report generation
         // This would populate the productionReportTable with data
+        showAlert(Alert.AlertType.INFORMATION, "Feature Coming Soon",
+                "Production report generation will be implemented in a future version.");
     }
 
     @FXML
     private void handleExportReport() {
         // Implementation for exporting reports to Excel
+        showAlert(Alert.AlertType.INFORMATION, "Feature Coming Soon",
+                "Report export functionality will be implemented in a future version.");
     }
-
-    // src/main/java/org/apiary/controller/BeekeeperDashboardController.java
 
     @FXML
     private void handleViewProfile() {
@@ -1063,9 +1034,9 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             // Create form fields
             TextField usernameField = new TextField(beekeeper.getUsername());
             usernameField.setDisable(true); // Username cannot be changed
-            TextField fullNameField = new TextField(beekeeper.getFullName());
-            TextField emailField = new TextField(beekeeper.getEmail());
             TextField phoneField = new TextField(beekeeper.getPhone());
+            TextArea addressField = new TextArea(beekeeper.getAddress());
+            addressField.setPrefRowCount(3);
             PasswordField currentPasswordField = new PasswordField();
             PasswordField newPasswordField = new PasswordField();
             PasswordField confirmPasswordField = new PasswordField();
@@ -1073,29 +1044,27 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             // Add labels and fields to grid
             grid.add(new Label("Username:"), 0, 0);
             grid.add(usernameField, 1, 0);
-            grid.add(new Label("Full Name:"), 0, 1);
-            grid.add(fullNameField, 1, 1);
-            grid.add(new Label("Email:"), 0, 2);
-            grid.add(emailField, 1, 2);
-            grid.add(new Label("Phone:"), 0, 3);
-            grid.add(phoneField, 1, 3);
+            grid.add(new Label("Phone:"), 0, 1);
+            grid.add(phoneField, 1, 1);
+            grid.add(new Label("Address:"), 0, 2);
+            grid.add(addressField, 1, 2);
 
             // Add separator
             Separator separator = new Separator();
-            grid.add(separator, 0, 4, 2, 1);
+            grid.add(separator, 0, 3, 2, 1);
 
             // Add password fields
-            grid.add(new Label("Current Password:"), 0, 5);
-            grid.add(currentPasswordField, 1, 5);
-            grid.add(new Label("New Password:"), 0, 6);
-            grid.add(newPasswordField, 1, 6);
-            grid.add(new Label("Confirm Password:"), 0, 7);
-            grid.add(confirmPasswordField, 1, 7);
+            grid.add(new Label("Current Password:"), 0, 4);
+            grid.add(currentPasswordField, 1, 4);
+            grid.add(new Label("New Password:"), 0, 5);
+            grid.add(newPasswordField, 1, 5);
+            grid.add(new Label("Confirm Password:"), 0, 6);
+            grid.add(confirmPasswordField, 1, 6);
 
             // Add helper text
             Label noteLabel = new Label("Leave password fields empty if you don't want to change it");
             noteLabel.setStyle("-fx-font-style: italic; -fx-font-size: 11px;");
-            grid.add(noteLabel, 0, 8, 2, 1);
+            grid.add(noteLabel, 0, 7, 2, 1);
 
             dialog.getDialogPane().setContent(grid);
 
@@ -1103,31 +1072,33 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
             dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
 
-            // Enable/Disable save button depending on whether a password is entered
-            Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
-
             // Convert result to user when save button is clicked
             dialog.setResultConverter(dialogButton -> {
                 if (dialogButton == saveButtonType) {
-                    // Create a copy of the beekeeper to return
-                    Beekeeper updatedBeekeeper = new Beekeeper();
-                    updatedBeekeeper.setUserId(beekeeper.getUserId());
-                    updatedBeekeeper.setUsername(beekeeper.getUsername());
-                    updatedBeekeeper.set(fullNameField.getText());
-                    updatedBeekeeper.setEmail(emailField.getText());
-                    updatedBeekeeper.setPhone(phoneField.getText());
-
-                    // Only include password if changing it
+                    // Validate passwords if changing
                     if (!currentPasswordField.getText().isEmpty() &&
                             !newPasswordField.getText().isEmpty() &&
                             !confirmPasswordField.getText().isEmpty()) {
-                        // Store passwords in the object for later validation
-                        updatedBeekeeper.setPassword(currentPasswordField.getText());
-                        updatedBeekeeper.setNewPassword(newPasswordField.getText());
-                        updatedBeekeeper.setConfirmPassword(confirmPasswordField.getText());
+
+                        if (!newPasswordField.getText().equals(confirmPasswordField.getText())) {
+                            showAlert(Alert.AlertType.ERROR, "Error",
+                                    "New passwords do not match.");
+                            return null;
+                        }
+
+                        if (!ValidationUtils.isValidPassword(newPasswordField.getText())) {
+                            showAlert(Alert.AlertType.ERROR, "Error",
+                                    "Password must be at least 8 characters and include uppercase, " +
+                                            "lowercase, number, and special character.");
+                            return null;
+                        }
                     }
 
-                    return updatedBeekeeper;
+                    // Update beekeeper info
+                    beekeeper.setPhone(phoneField.getText());
+                    beekeeper.setAddress(addressField.getText());
+
+                    return beekeeper;
                 }
                 return null;
             });
@@ -1135,43 +1106,30 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Optional<User> result = dialog.showAndWait();
             result.ifPresent(updatedUser -> {
                 try {
-                    // Check if this is a password change
-                    boolean passwordChange = updatedUser.getNewPassword() != null &&
-                            !updatedUser.getNewPassword().isEmpty();
+                    // Handle password change if needed
+                    boolean passwordChanged = false;
+                    if (!currentPasswordField.getText().isEmpty() &&
+                            !newPasswordField.getText().isEmpty()) {
 
-                    if (passwordChange) {
-                        // First verify current password
-                        if (!ServiceFactory.getUserService().verifyPassword(
-                                beekeeper.getUsername(), updatedUser.getPassword())) {
+                        passwordChanged = ServiceFactory.getUserService().changePassword(
+                                beekeeper.getUsername(),
+                                currentPasswordField.getText(),
+                                newPasswordField.getText());
+
+                        if (!passwordChanged) {
                             showAlert(Alert.AlertType.ERROR, "Error",
                                     "Current password is incorrect.");
                             return;
                         }
-
-                        // Then verify new passwords match
-                        if (!updatedUser.getNewPassword().equals(updatedUser.getConfirmPassword())) {
-                            showAlert(Alert.AlertType.ERROR, "Error",
-                                    "New passwords do not match.");
-                            return;
-                        }
                     }
 
-                    // Update user profile
-                    User savedUser = ServiceFactory.getUserService().updateUserProfile(
-                            beekeeper.getId(),
-                            updatedUser.getFullName(),
-                            updatedUser.getEmail(),
-                            updatedUser.getPhone(),
-                            passwordChange ? updatedUser.getNewPassword() : null);
+                    // Update profile
+                    User savedUser = ServiceFactory.getUserService().updateProfile(updatedUser);
 
                     if (savedUser != null) {
-                        // Update local beekeeper object
-                        beekeeper.setFullName(savedUser.getFullName());
-                        beekeeper.setEmail(savedUser.getEmail());
-                        beekeeper.setPhone(savedUser.getPhone());
-
                         showAlert(Alert.AlertType.INFORMATION, "Success",
-                                "Profile updated successfully.");
+                                "Profile updated successfully." +
+                                        (passwordChanged ? " Password changed." : ""));
                     } else {
                         showAlert(Alert.AlertType.ERROR, "Error",
                                 "Failed to update profile.");
@@ -1217,69 +1175,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         "Could not return to login screen: " + e.getMessage());
             }
         }
-    }
-
-    @FXML
-    private void handleViewOrder(Order order) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/orderDetailsDialog.fxml"));
-            DialogPane dialogPane = loader.load();
-
-            OrderDetailsController controller = loader.getController();
-            controller.setOrder(order);
-
-            Dialog<ButtonType> dialog = new Dialog<>();
-            dialog.setDialogPane(dialogPane);
-            dialog.setTitle("Order Details - #" + order.getOrderId());
-
-            dialog.showAndWait();
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error loading order details dialog", e);
-            showAlert(Alert.AlertType.ERROR, "Error",
-                    "Could not open order details: " + e.getMessage());
-        }
-    }
-
-    @FXML
-    private void handleUpdateOrderStatus(Order order) {
-        ComboBox<String> statusComboBox = new ComboBox<>();
-        statusComboBox.getItems().addAll("PENDING", "PAID", "DELIVERED", "CANCELED");
-        statusComboBox.setValue(order.getStatus());
-
-        Dialog<String> dialog = new Dialog<>();
-        dialog.setTitle("Update Order Status");
-        dialog.setHeaderText("Update Status for Order #" + order.getOrderId());
-
-        DialogPane dialogPane = dialog.getDialogPane();
-        dialogPane.setContent(statusComboBox);
-        dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        dialog.setResultConverter(buttonType -> {
-            if (buttonType == ButtonType.OK) {
-                return statusComboBox.getValue();
-            }
-            return null;
-        });
-
-        Optional<String> result = dialog.showAndWait();
-        result.ifPresent(newStatus -> {
-            try {
-                boolean updated = orderService.updateOrderStatus(order.getOrderId(), newStatus);
-
-                if (updated) {
-                    loadOrders();
-                    showAlert(Alert.AlertType.INFORMATION, "Success",
-                            "Order status updated successfully.");
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Error",
-                            "Failed to update order status.");
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error updating order status", e);
-                showAlert(Alert.AlertType.ERROR, "Error",
-                        "Failed to update order status: " + e.getMessage());
-            }
-        });
     }
 
     private void showAlert(Alert.AlertType alertType, String title, String message) {

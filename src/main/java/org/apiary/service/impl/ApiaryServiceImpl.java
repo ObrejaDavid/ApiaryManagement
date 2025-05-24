@@ -4,6 +4,8 @@ import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
 import org.apiary.repository.interfaces.ApiaryRepository;
 import org.apiary.service.interfaces.ApiaryService;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.EventManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,7 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class ApiaryServiceImpl implements ApiaryService {
+public class ApiaryServiceImpl extends EventManager<EntityChangeEvent<?>> implements ApiaryService {
 
     private static final Logger LOGGER = Logger.getLogger(ApiaryServiceImpl.class.getName());
     private final ApiaryRepository apiaryRepository;
@@ -25,11 +27,74 @@ public class ApiaryServiceImpl implements ApiaryService {
         try {
             Apiary apiary = new Apiary(name, location, beekeeper);
             Apiary savedApiary = apiaryRepository.save(apiary);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedApiary));
+
             LOGGER.info("Created new apiary: " + name + " for beekeeper: " + beekeeper.getUsername());
             return savedApiary;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error creating apiary: " + name, e);
             return null;
+        }
+    }
+
+
+    @Override
+    public Apiary updateApiary(Integer apiaryId, String name, String location, Beekeeper beekeeper) {
+        try {
+            Optional<Apiary> apiaryOpt = apiaryRepository.findById(apiaryId);
+            if (apiaryOpt.isEmpty()) {
+                LOGGER.warning("Apiary not found: " + apiaryId);
+                return null;
+            }
+
+            Apiary apiary = apiaryOpt.get();
+            Apiary oldApiary = new Apiary(apiary.getName(), apiary.getLocation(), apiary.getBeekeeper());
+            oldApiary.setApiaryId(apiary.getApiaryId());
+
+            // Check if the apiary belongs to the beekeeper
+            if (!apiary.getBeekeeper().equals(beekeeper)) {
+                LOGGER.warning("Apiary does not belong to beekeeper: " + beekeeper.getUsername());
+                return null;
+            }
+
+            apiary.setName(name);
+            apiary.setLocation(location);
+
+            Apiary updatedApiary = apiaryRepository.save(apiary);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedApiary, oldApiary));
+
+            LOGGER.info("Updated apiary: " + apiaryId);
+            return updatedApiary;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating apiary: " + apiaryId, e);
+            return null;
+        }
+    }
+
+    @Override
+    public boolean deleteApiary(Integer apiaryId) {
+        try {
+            Optional<Apiary> apiaryOpt = apiaryRepository.findById(apiaryId);
+            if (apiaryOpt.isEmpty()) {
+                LOGGER.warning("Apiary not found: " + apiaryId);
+                return false;
+            }
+
+            Apiary apiary = apiaryOpt.get();
+            apiaryRepository.deleteById(apiaryId);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, apiary));
+
+            LOGGER.info("Deleted apiary: " + apiaryId);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting apiary: " + apiaryId, e);
+            return false;
         }
     }
 
@@ -70,53 +135,6 @@ public class ApiaryServiceImpl implements ApiaryService {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding apiaries by location: " + location, e);
             return List.of();
-        }
-    }
-
-    @Override
-    public Apiary updateApiary(Integer apiaryId, String name, String location, Beekeeper beekeeper) {
-        try {
-            Optional<Apiary> apiaryOpt = apiaryRepository.findById(apiaryId);
-            if (apiaryOpt.isEmpty()) {
-                LOGGER.warning("Apiary not found: " + apiaryId);
-                return null;
-            }
-
-            Apiary apiary = apiaryOpt.get();
-
-            // Check if the apiary belongs to the beekeeper
-            if (!apiary.getBeekeeper().equals(beekeeper)) {
-                LOGGER.warning("Apiary does not belong to beekeeper: " + beekeeper.getUsername());
-                return null;
-            }
-
-            apiary.setName(name);
-            apiary.setLocation(location);
-
-            Apiary updatedApiary = apiaryRepository.save(apiary);
-            LOGGER.info("Updated apiary: " + apiaryId);
-            return updatedApiary;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error updating apiary: " + apiaryId, e);
-            return null;
-        }
-    }
-
-    @Override
-    public boolean deleteApiary(Integer apiaryId) {
-        try {
-            Optional<Apiary> apiaryOpt = apiaryRepository.findById(apiaryId);
-            if (apiaryOpt.isEmpty()) {
-                LOGGER.warning("Apiary not found: " + apiaryId);
-                return false;
-            }
-
-            apiaryRepository.deleteById(apiaryId);
-            LOGGER.info("Deleted apiary: " + apiaryId);
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting apiary: " + apiaryId, e);
-            return false;
         }
     }
 

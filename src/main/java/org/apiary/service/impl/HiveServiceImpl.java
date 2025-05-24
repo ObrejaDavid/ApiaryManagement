@@ -6,13 +6,15 @@ import org.apiary.model.Hive;
 import org.apiary.repository.interfaces.HiveRepository;
 import org.apiary.service.interfaces.ApiaryService;
 import org.apiary.service.interfaces.HiveService;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.EventManager;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class HiveServiceImpl implements HiveService {
+public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implements HiveService {
 
     private static final Logger LOGGER = Logger.getLogger(HiveServiceImpl.class.getName());
     private final HiveRepository hiveRepository;
@@ -43,6 +45,10 @@ public class HiveServiceImpl implements HiveService {
 
             Hive hive = new Hive(hiveNumber, queenYear, apiary);
             Hive savedHive = hiveRepository.save(hive);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedHive));
+
             LOGGER.info("Created new hive: " + hiveNumber + " in apiary: " + apiary.getName());
             return savedHive;
         } catch (Exception e) {
@@ -51,6 +57,84 @@ public class HiveServiceImpl implements HiveService {
         }
     }
 
+    @Override
+    public Hive updateHive(Integer hiveId, Integer hiveNumber, Integer queenYear, Beekeeper beekeeper) {
+        try {
+            Optional<Hive> hiveOpt = hiveRepository.findById(hiveId);
+            if (hiveOpt.isEmpty()) {
+                LOGGER.warning("Hive not found: " + hiveId);
+                return null;
+            }
+
+            Hive hive = hiveOpt.get();
+            Hive oldHive = new Hive(hive.getHiveNumber(), hive.getQueenYear(), hive.getApiary());
+            oldHive.setHiveId(hive.getHiveId());
+
+            // Check if hive belongs to beekeeper
+            if (!isHiveOwnedByBeekeeper(hiveId, beekeeper)) {
+                LOGGER.warning("Hive does not belong to beekeeper: " +
+                        hiveId + ", " + beekeeper.getUsername());
+                return null;
+            }
+
+            // Check if new hive number already exists in apiary
+            if (!hive.getHiveNumber().equals(hiveNumber)) {
+                List<Hive> existingHives = findByApiaryAndHiveNumber(hive.getApiary(), hiveNumber);
+                if (!existingHives.isEmpty()) {
+                    LOGGER.warning("Hive number already exists in apiary: " +
+                            hiveNumber + ", " + hive.getApiary().getApiaryId());
+                    return null;
+                }
+            }
+
+            hive.setHiveNumber(hiveNumber);
+            hive.setQueenYear(queenYear);
+
+            Hive updatedHive = hiveRepository.save(hive);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedHive, oldHive));
+
+            LOGGER.info("Updated hive: " + hiveId);
+            return updatedHive;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating hive: " + hiveId, e);
+            return null;
+        }
+    }
+
+    @Override
+    public boolean deleteHive(Integer hiveId, Beekeeper beekeeper) {
+        try {
+            Optional<Hive> hiveOpt = hiveRepository.findById(hiveId);
+            if (hiveOpt.isEmpty()) {
+                LOGGER.warning("Hive not found: " + hiveId);
+                return false;
+            }
+
+            Hive hive = hiveOpt.get();
+
+            // Check if hive belongs to beekeeper
+            if (!isHiveOwnedByBeekeeper(hiveId, beekeeper)) {
+                LOGGER.warning("Hive does not belong to beekeeper: " +
+                        hiveId + ", " + beekeeper.getUsername());
+                return false;
+            }
+
+            hiveRepository.deleteById(hiveId);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, hive));
+
+            LOGGER.info("Deleted hive: " + hiveId);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting hive: " + hiveId, e);
+            return false;
+        }
+    }
+
+    // ... rest of the methods remain the same (findById, findByApiary, etc.)
     @Override
     public Optional<Hive> findById(Integer hiveId) {
         try {
@@ -99,71 +183,6 @@ public class HiveServiceImpl implements HiveService {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error counting hives by apiary: " + apiary.getApiaryId(), e);
             return 0;
-        }
-    }
-
-    @Override
-    public Hive updateHive(Integer hiveId, Integer hiveNumber, Integer queenYear, Beekeeper beekeeper) {
-        try {
-            Optional<Hive> hiveOpt = hiveRepository.findById(hiveId);
-            if (hiveOpt.isEmpty()) {
-                LOGGER.warning("Hive not found: " + hiveId);
-                return null;
-            }
-
-            Hive hive = hiveOpt.get();
-
-            // Check if hive belongs to beekeeper
-            if (!isHiveOwnedByBeekeeper(hiveId, beekeeper)) {
-                LOGGER.warning("Hive does not belong to beekeeper: " +
-                        hiveId + ", " + beekeeper.getUsername());
-                return null;
-            }
-
-            // Check if new hive number already exists in apiary
-            if (!hive.getHiveNumber().equals(hiveNumber)) {
-                List<Hive> existingHives = findByApiaryAndHiveNumber(hive.getApiary(), hiveNumber);
-                if (!existingHives.isEmpty()) {
-                    LOGGER.warning("Hive number already exists in apiary: " +
-                            hiveNumber + ", " + hive.getApiary().getApiaryId());
-                    return null;
-                }
-            }
-
-            hive.setHiveNumber(hiveNumber);
-            hive.setQueenYear(queenYear);
-
-            Hive updatedHive = hiveRepository.save(hive);
-            LOGGER.info("Updated hive: " + hiveId);
-            return updatedHive;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error updating hive: " + hiveId, e);
-            return null;
-        }
-    }
-
-    @Override
-    public boolean deleteHive(Integer hiveId, Beekeeper beekeeper) {
-        try {
-            Optional<Hive> hiveOpt = hiveRepository.findById(hiveId);
-            if (hiveOpt.isEmpty()) {
-                LOGGER.warning("Hive not found: " + hiveId);
-                return false;
-            }
-
-            // Check if hive belongs to beekeeper
-            if (!isHiveOwnedByBeekeeper(hiveId, beekeeper)) {
-                LOGGER.warning("Hive does not belong to beekeeper: " +
-                        hiveId + ", " + beekeeper.getUsername());
-                return false;
-            }
-
-            hiveRepository.deleteById(hiveId);
-            LOGGER.info("Deleted hive: " + hiveId);
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting hive: " + hiveId, e);
-            return false;
         }
     }
 

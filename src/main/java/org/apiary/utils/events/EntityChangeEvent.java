@@ -15,6 +15,7 @@ public class EntityChangeEvent<T> implements Event {
     private final Type type;
     private final T entity;
     private final T oldEntity;
+    private final String entityType;
 
     /**
      * Create a new entity change event
@@ -35,6 +36,7 @@ public class EntityChangeEvent<T> implements Event {
         this.type = type;
         this.entity = entity;
         this.oldEntity = oldEntity;
+        this.entityType = entity != null ? entity.getClass().getSimpleName() : "Unknown";
     }
 
     /**
@@ -59,5 +61,13 @@ public class EntityChangeEvent<T> implements Event {
      */
     public T getOldEntity() {
         return oldEntity;
+    }
+
+    /**
+     * Get the entity type as string
+     * @return The entity type
+     */
+    public String getEntityType() {
+        return entityType;
     }
 }

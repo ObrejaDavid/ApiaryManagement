@@ -8,6 +8,8 @@ import org.apiary.repository.interfaces.HoneyProductRepository;
 import org.apiary.service.interfaces.ApiaryService;
 import org.apiary.service.interfaces.HiveService;
 import org.apiary.service.interfaces.HoneyProductService;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.EventManager;
 import org.apiary.utils.pagination.Page;
 import org.apiary.utils.pagination.Pageable;
 import org.apiary.utils.pagination.PaginationUtils;
@@ -19,7 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class HoneyProductServiceImpl implements HoneyProductService {
+public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> implements HoneyProductService {
 
     private static final Logger LOGGER = Logger.getLogger(HoneyProductServiceImpl.class.getName());
     private final HoneyProductRepository honeyProductRepository;
@@ -57,6 +59,10 @@ public class HoneyProductServiceImpl implements HoneyProductService {
             product.setHive(hive);
 
             HoneyProduct savedProduct = honeyProductRepository.save(product);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedProduct));
+
             LOGGER.info("Created new honey product: " + name + " for apiary: " + apiary.getName());
             return savedProduct;
         } catch (Exception e) {
@@ -65,6 +71,80 @@ public class HoneyProductServiceImpl implements HoneyProductService {
         }
     }
 
+    @Override
+    public HoneyProduct updateHoneyProduct(Integer productId, String name, String description,
+                                           BigDecimal price, BigDecimal quantity,
+                                           Beekeeper beekeeper) {
+        try {
+            Optional<HoneyProduct> productOpt = honeyProductRepository.findById(productId);
+            if (productOpt.isEmpty()) {
+                LOGGER.warning("Honey product not found: " + productId);
+                return null;
+            }
+
+            HoneyProduct product = productOpt.get();
+            HoneyProduct oldProduct = new HoneyProduct(product.getName(), product.getDescription(),
+                    product.getPrice(), product.getQuantity(), product.getApiary());
+            oldProduct.setProductId(product.getProductId());
+            oldProduct.setHive(product.getHive());
+
+            // Check if product belongs to beekeeper
+            if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
+                LOGGER.warning("Honey product does not belong to beekeeper: " +
+                        productId + ", " + beekeeper.getUsername());
+                return null;
+            }
+
+            product.setName(name);
+            product.setDescription(description);
+            product.setPrice(price);
+            product.setQuantity(quantity);
+
+            HoneyProduct updatedProduct = honeyProductRepository.save(product);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedProduct, oldProduct));
+
+            LOGGER.info("Updated honey product: " + productId);
+            return updatedProduct;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating honey product: " + productId, e);
+            return null;
+        }
+    }
+
+    @Override
+    public boolean deleteHoneyProduct(Integer productId, Beekeeper beekeeper) {
+        try {
+            Optional<HoneyProduct> productOpt = honeyProductRepository.findById(productId);
+            if (productOpt.isEmpty()) {
+                LOGGER.warning("Honey product not found: " + productId);
+                return false;
+            }
+
+            HoneyProduct product = productOpt.get();
+
+            // Check if product belongs to beekeeper
+            if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
+                LOGGER.warning("Honey product does not belong to beekeeper: " +
+                        productId + ", " + beekeeper.getUsername());
+                return false;
+            }
+
+            honeyProductRepository.deleteById(productId);
+
+            // Notify observers
+            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, product));
+
+            LOGGER.info("Deleted honey product: " + productId);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting honey product: " + productId, e);
+            return false;
+        }
+    }
+
+    // ... rest of the methods remain the same
     @Override
     public Optional<HoneyProduct> findById(Integer productId) {
         try {
@@ -153,65 +233,6 @@ public class HoneyProductServiceImpl implements HoneyProductService {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding available honey products", e);
             return List.of();
-        }
-    }
-
-    @Override
-    public HoneyProduct updateHoneyProduct(Integer productId, String name, String description,
-                                           BigDecimal price, BigDecimal quantity,
-                                           Beekeeper beekeeper) {
-        try {
-            Optional<HoneyProduct> productOpt = honeyProductRepository.findById(productId);
-            if (productOpt.isEmpty()) {
-                LOGGER.warning("Honey product not found: " + productId);
-                return null;
-            }
-
-            HoneyProduct product = productOpt.get();
-
-            // Check if product belongs to beekeeper
-            if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
-                LOGGER.warning("Honey product does not belong to beekeeper: " +
-                        productId + ", " + beekeeper.getUsername());
-                return null;
-            }
-
-            product.setName(name);
-            product.setDescription(description);
-            product.setPrice(price);
-            product.setQuantity(quantity);
-
-            HoneyProduct updatedProduct = honeyProductRepository.save(product);
-            LOGGER.info("Updated honey product: " + productId);
-            return updatedProduct;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error updating honey product: " + productId, e);
-            return null;
-        }
-    }
-
-    @Override
-    public boolean deleteHoneyProduct(Integer productId, Beekeeper beekeeper) {
-        try {
-            Optional<HoneyProduct> productOpt = honeyProductRepository.findById(productId);
-            if (productOpt.isEmpty()) {
-                LOGGER.warning("Honey product not found: " + productId);
-                return false;
-            }
-
-            // Check if product belongs to beekeeper
-            if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
-                LOGGER.warning("Honey product does not belong to beekeeper: " +
-                        productId + ", " + beekeeper.getUsername());
-                return false;
-            }
-
-            honeyProductRepository.deleteById(productId);
-            LOGGER.info("Deleted honey product: " + productId);
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting honey product: " + productId, e);
-            return false;
         }
     }
 
