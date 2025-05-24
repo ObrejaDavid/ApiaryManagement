@@ -2,11 +2,13 @@ package org.apiary.service.interfaces;
 
 import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.Observable;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface ApiaryService {
+public interface ApiaryService extends Observable<EntityChangeEvent<?>> {
     /**
      * Create a new apiary
      * @param name The name of the apiary

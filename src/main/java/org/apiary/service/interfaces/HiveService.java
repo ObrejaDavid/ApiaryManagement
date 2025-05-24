@@ -3,11 +3,13 @@ package org.apiary.service.interfaces;
 import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
 import org.apiary.model.Hive;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.Observable;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface HiveService {
+public interface HiveService extends Observable<EntityChangeEvent<?>> {
     /**
      * Create a new hive
      * @param hiveNumber The hive number

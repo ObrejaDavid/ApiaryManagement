@@ -4,6 +4,8 @@ import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
 import org.apiary.model.Hive;
 import org.apiary.model.HoneyProduct;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.Observable;
 import org.apiary.utils.pagination.Page;
 import org.apiary.utils.pagination.Pageable;
 
@@ -11,7 +13,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-public interface HoneyProductService {
+public interface HoneyProductService extends Observable<EntityChangeEvent<?>> {
     /**
      * Create a new honey product
      * @param name The name of the product
