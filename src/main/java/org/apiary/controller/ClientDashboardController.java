@@ -27,6 +27,7 @@ import org.apiary.utils.events.EntityChangeEvent;
 import org.apiary.utils.observer.Observer;
 import org.apiary.utils.pagination.Page;
 import org.apiary.utils.pagination.Pageable;
+import org.apiary.service.interfaces.UserService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -89,6 +90,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     private ShoppingCartService shoppingCartService;
     private OrderService orderService;
     private ApiaryService apiaryService;
+    private UserService userService;
 
     // Pagination state
     private int currentPage = 0;
@@ -113,6 +115,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         shoppingCartService = ServiceFactory.getShoppingCartService();
         orderService = ServiceFactory.getOrderService();
         apiaryService = ServiceFactory.getApiaryService();
+        userService = ServiceFactory.getUserService();
 
         // Register as observer for cart and order changes
         honeyProductService.addObserver(this);

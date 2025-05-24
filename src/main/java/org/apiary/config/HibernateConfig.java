@@ -21,16 +21,15 @@ public class HibernateConfig {
                 Properties settings = new Properties();
                 settings.put(Environment.DRIVER, "com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
-                // Check if Windows Authentication should be used
-                boolean useWindowsAuth = Boolean.parseBoolean(
-                        System.getProperty("db.windows.auth", "true"));
+                // FORCE SQL Server Authentication (disable Windows auth)
+                boolean useWindowsAuth = false; // Change this line from true to false
 
                 String serverName = System.getProperty("db.server", "localhost");
                 String port = System.getProperty("db.port", "1433");
                 String databaseName = System.getProperty("db.name", "apiary");
 
                 if (useWindowsAuth) {
-                    // Windows Authentication
+                    // Windows Authentication - DISABLED
                     settings.put(Environment.URL,
                             String.format("jdbc:sqlserver://%s:%s;" +
                                             "databaseName=%s;" +
@@ -39,9 +38,9 @@ public class HibernateConfig {
                                             "encrypt=false",
                                     serverName, port, databaseName));
                 } else {
-                    // SQL Server Authentication
-                    String username = System.getProperty("db.username", "sa");
-                    String password = System.getProperty("db.password", "");
+                    // SQL Server Authentication - ENABLED
+                    String username = System.getProperty("db.username", "david");
+                    String password = System.getProperty("db.password", "treiezicucuieti");
 
                     settings.put(Environment.URL,
                             String.format("jdbc:sqlserver://%s:%s;" +
@@ -53,6 +52,10 @@ public class HibernateConfig {
                     settings.put(Environment.PASS, password);
                 }
 
+                // ... rest of the method remains the same
+
+                settings.put(Environment.USER, "david");
+                settings.put(Environment.PASS, "treiezicucuieti");
                 settings.put(Environment.DIALECT, "org.hibernate.dialect.SQLServer2012Dialect");
                 settings.put(Environment.SHOW_SQL, "true");
                 settings.put(Environment.FORMAT_SQL, "true");
