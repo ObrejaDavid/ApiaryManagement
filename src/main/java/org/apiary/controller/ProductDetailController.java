@@ -25,7 +25,7 @@ public class ProductDetailController {
     @FXML private Label productAvailabilityLabel;
     @FXML private Spinner<Integer> quantitySpinner;
     @FXML private TextFlow productDescriptionFlow;
-    @FXML private Text productDescriptionText;
+    @FXML private TextArea productDescriptionArea;
     @FXML private Label apiaryNameLabel;
     @FXML private Label apiaryLocationLabel;
     @FXML private Label harvestDateLabel;
@@ -54,7 +54,7 @@ public class ProductDetailController {
             productNameLabel.setText(product.getName());
             productPriceLabel.setText(product.getPrice() + " RON");
             productAvailabilityLabel.setText(product.getQuantity() + " kg available");
-            productDescriptionText.setText(product.getDescription() != null ? product.getDescription() : "No description available.");
+            productDescriptionArea.setText(product.getDescription() != null ? product.getDescription() : "No description available.");
             apiaryNameLabel.setText(product.getApiary().getName());
             apiaryLocationLabel.setText(product.getApiary().getLocation());
             harvestDateLabel.setText("Recently harvested");

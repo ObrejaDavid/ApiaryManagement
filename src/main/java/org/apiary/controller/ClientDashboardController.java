@@ -13,6 +13,8 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.apiary.model.*;
@@ -471,18 +473,27 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         productTile.setPadding(new Insets(10));
         productTile.setSpacing(5);
 
-        // Try to load product image or use default
+        // Replace the problematic image loading with a simple placeholder
         ImageView productImage = new ImageView();
-        try {
-            // In a real app, you'd load actual product images
-            productImage.setImage(new Image("/images/honey_default.png"));
-        } catch (Exception e) {
-            // Use a default or placeholder image
-            productImage.setImage(new Image("/images/placeholder.png"));
-        }
         productImage.setFitWidth(180);
         productImage.setFitHeight(120);
         productImage.setPreserveRatio(true);
+
+        // Create a simple colored rectangle as placeholder instead of loading images
+        Rectangle placeholder = new Rectangle(180, 120);
+        placeholder.setFill(Color.LIGHTGOLDENRODYELLOW);
+        placeholder.setStroke(Color.DARKGOLDENROD);
+        placeholder.setStrokeWidth(2);
+
+        // Create a container for the placeholder
+        StackPane imageContainer = new StackPane();
+        imageContainer.setPrefSize(180, 120);
+        imageContainer.getChildren().add(placeholder);
+
+        // Add a honey icon text as placeholder
+        Label honeyIcon = new Label("🍯");
+        honeyIcon.setStyle("-fx-font-size: 36px;");
+        imageContainer.getChildren().add(honeyIcon);
 
         Label nameLabel = new Label(product.getName());
         nameLabel.getStyleClass().add("product-name");
@@ -504,7 +515,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         addToCartButton.setOnAction(e -> handleQuickAddToCart(product));
 
         productTile.getChildren().addAll(
-                productImage, nameLabel, apiaryLabel, priceLabel,
+                imageContainer, nameLabel, apiaryLabel, priceLabel,
                 new Region(), viewButton, addToCartButton);
         VBox.setVgrow(viewButton, Priority.ALWAYS);
 

@@ -75,9 +75,9 @@
                 <!-- Product Description -->
                 <VBox spacing="10">
                     <Label text="Description" styleClass="subsection-title"/>
-                    <TextFlow fx:id="productDescriptionFlow">
-                        <Text fx:id="productDescriptionText" text="[Product Description]" wrappingWidth="740"/>
-                    </TextFlow>
+                    <TextArea fx:id="productDescriptionArea" text="[Product Description]"
+                              wrapText="true" editable="false" prefHeight="100"
+                              style="-fx-background-color: transparent; -fx-border-color: transparent;"/>
                 </VBox>
 
                 <Separator/>

@@ -39,8 +39,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order createOrderFromCart(Client client) {
         try {
+            LOGGER.info("Starting order creation for client: " + client.getUsername());
+
             // Get cart items
             List<CartItem> cartItems = shoppingCartService.getCartItems(client);
+            LOGGER.info("Found " + cartItems.size() + " cart items");
+
             if (cartItems.isEmpty()) {
                 LOGGER.warning("Cannot create order from empty cart for client: " + client.getUsername());
                 return null;
@@ -48,16 +52,24 @@ public class OrderServiceImpl implements OrderService {
 
             // Create order
             Order order = new Order(client);
+            LOGGER.info("Created new order object");
+
+            // Save order first
             Order savedOrder = orderRepository.save(order);
+            LOGGER.info("Saved order with ID: " + savedOrder.getOrderId());
 
             // Create order items from cart items
             for (CartItem cartItem : cartItems) {
+                LOGGER.info("Processing cart item: " + cartItem.getProduct().getName());
+
                 OrderItem orderItem = new OrderItem(
                         savedOrder,
                         cartItem.getProduct(),
                         cartItem.getQuantity(),
                         cartItem.getPrice());
-                orderItemRepository.save(orderItem);
+
+                OrderItem savedOrderItem = orderItemRepository.save(orderItem);
+                LOGGER.info("Saved order item with ID: " + savedOrderItem.getOrderItemId());
 
                 // Add order item to order
                 savedOrder.addItem(orderItem);
@@ -65,15 +77,20 @@ public class OrderServiceImpl implements OrderService {
 
             // Calculate total
             savedOrder.recalculateTotal();
+            LOGGER.info("Order total calculated: " + savedOrder.getTotal());
+
+            // Save order again with items
             savedOrder = orderRepository.save(savedOrder);
+            LOGGER.info("Final order save completed");
 
-            // Clear cart
-            shoppingCartService.clearCart(client);
+            // Don't clear cart here - do it after payment confirmation
+            // shoppingCartService.clearCart(client);
 
-            LOGGER.info("Created order from cart for client: " + client.getUsername());
+            LOGGER.info("Successfully created order from cart for client: " + client.getUsername());
             return savedOrder;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error creating order from cart for client: " + client.getUsername(), e);
+            e.printStackTrace(); // This will help us see the full stack trace
             return null;
         }
     }

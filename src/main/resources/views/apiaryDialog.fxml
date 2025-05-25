@@ -49,7 +49,7 @@
     </content>
 
     <buttonTypes>
-        <ButtonType fx:constant="SAVE"/>
+        <ButtonType fx:constant="OK"/>
         <ButtonType fx:constant="CANCEL"/>
     </buttonTypes>
 </DialogPane>
