@@ -251,6 +251,60 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                 }
             }
         });
+        LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
+
+        testObserverPattern();
+    }
+
+    private void testObserverPattern() {
+        LOGGER.info("=== TESTING OBSERVER PATTERN ===");
+
+        try {
+            // Log service factory instances
+            ServiceFactory.logServiceInstances();
+
+            // Force a refresh to test the mechanism
+            Platform.runLater(() -> {
+                try {
+                    LOGGER.info("Testing manual product refresh...");
+                    forceRefreshProducts();
+                    LOGGER.info("Manual product refresh completed");
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error in test observer pattern", e);
+                }
+            });
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error testing observer pattern", e);
+        }
+
+        LOGGER.info("=== OBSERVER PATTERN TEST COMPLETED ===");
+    }
+
+    @FXML
+    private void handleTestObserverNotification() {
+        LOGGER.info("=== MANUAL OBSERVER NOTIFICATION TEST ===");
+
+        try {
+            // Create a dummy product for testing
+            HoneyProduct testProduct = new HoneyProduct();
+            testProduct.setProductId(999999);
+            testProduct.setName("Test Product");
+            testProduct.setPrice(new BigDecimal("99.99"));
+            testProduct.setQuantity(new BigDecimal("10"));
+
+            // Create a test event
+            EntityChangeEvent<HoneyProduct> testEvent = new EntityChangeEvent<>(
+                    EntityChangeEvent.Type.UPDATED, testProduct);
+
+            LOGGER.info("Manually triggering update with test event...");
+            update(testEvent);
+
+            LOGGER.info("Manual observer test completed");
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in manual observer test", e);
+        }
     }
 
     @Override
@@ -265,16 +319,24 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                     " | Name: " + product.getName() + " | Price: " + product.getPrice());
         }
 
-        if (Platform.isFxApplicationThread()) {
-            LOGGER.info("Already on JavaFX Application Thread, processing immediately");
-            handleEntityChangeUpdate(event);
-        } else {
-            LOGGER.info("Not on JavaFX Application Thread, using Platform.runLater");
-            Platform.runLater(() -> {
-                LOGGER.info("Platform.runLater execution started");
+        try {
+            if (Platform.isFxApplicationThread()) {
+                LOGGER.info("Already on JavaFX Application Thread, processing immediately");
                 handleEntityChangeUpdate(event);
-                LOGGER.info("Platform.runLater execution completed");
-            });
+            } else {
+                LOGGER.info("Not on JavaFX Application Thread, using Platform.runLater");
+                Platform.runLater(() -> {
+                    try {
+                        LOGGER.info("Platform.runLater execution started");
+                        handleEntityChangeUpdate(event);
+                        LOGGER.info("Platform.runLater execution completed");
+                    } catch (Exception e) {
+                        LOGGER.log(Level.SEVERE, "Error in Platform.runLater execution", e);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in update method", e);
         }
 
         LOGGER.info("=== CLIENT DASHBOARD UPDATE METHOD COMPLETED ===");
@@ -456,12 +518,24 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
 
         LOGGER.info("=== CLIENT SET: " + client.getUsername() + " ===");
 
-        // Test observer registration
-        testObserverRegistration();
+        // Verify observer registration
+        verifyObserverRegistration();
 
         // Load initial data
         loadProducts();
+
+        // ADD THIS FOR AUTOMATIC TESTING
+        Platform.runLater(() -> {
+            try {
+                Thread.sleep(2000); // Wait 2 seconds for everything to load
+                LOGGER.info("=== RUNNING AUTOMATIC OBSERVER TEST ===");
+                handleTestObserverNotification();
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error in automatic observer test", e);
+            }
+        });
     }
+
 
     private void setupFilterOptions() {
         // Category filter
@@ -769,6 +843,57 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             LOGGER.log(Level.SEVERE, "Error loading products", e);
             showAlert(Alert.AlertType.ERROR, "Error", "Failed to load products: " + e.getMessage());
         }
+    }
+
+
+    private void verifyObserverRegistration() {
+        LOGGER.info("=== VERIFYING OBSERVER REGISTRATION ===");
+
+        try {
+            // Check HoneyProductService
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                int observerCount = eventManager.countObservers();
+                LOGGER.info("HoneyProductService has " + observerCount + " observers registered");
+
+                if (observerCount == 0) {
+                    LOGGER.warning("No observers registered for HoneyProductService! Re-registering...");
+                    honeyProductService.addObserver(this);
+                }
+            }
+
+            // Check OrderService
+            if (orderService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) orderService;
+                int observerCount = eventManager.countObservers();
+                LOGGER.info("OrderService has " + observerCount + " observers registered");
+
+                if (observerCount == 0) {
+                    LOGGER.warning("No observers registered for OrderService! Re-registering...");
+                    orderService.addObserver(this);
+                }
+            }
+
+            // Check ApiaryService
+            if (apiaryService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) apiaryService;
+                int observerCount = eventManager.countObservers();
+                LOGGER.info("ApiaryService has " + observerCount + " observers registered");
+
+                if (observerCount == 0) {
+                    LOGGER.warning("No observers registered for ApiaryService! Re-registering...");
+                    apiaryService.addObserver(this);
+                }
+            }
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error verifying observer registration", e);
+        }
+
+        LOGGER.info("=== OBSERVER REGISTRATION VERIFICATION COMPLETED ===");
     }
 
     private void createProductTile(HoneyProduct product) {

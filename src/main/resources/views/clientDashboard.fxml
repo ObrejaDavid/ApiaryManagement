@@ -38,6 +38,7 @@
                 <Button text="My Cart" onAction="#handleViewCart" styleClass="nav-button"/>
                 <Button text="My Orders" onAction="#handleViewOrders" styleClass="nav-button"/>
                 <Button text="View Apiaries" onAction="#handleViewApiaries" styleClass="nav-button"/>
+                <Button text="Test Observer" onAction="#handleTestObserverNotification" styleClass="nav-button"/>
             </HBox>
         </VBox>
     </top>

@@ -49,6 +49,61 @@ public class ServiceFactory {
         // Private constructor to prevent instantiation
     }
 
+    // src/main/java/org/apiary/service/ServiceFactory.java
+// Replace the existing logServiceInstances method
+
+    public static void logServiceInstances() {
+        Logger logger = Logger.getLogger(ServiceFactory.class.getName());
+
+        logger.info("=== SERVICE FACTORY INSTANCES ===");
+        logger.info("HoneyProductService: " + honeyProductService.getClass().getSimpleName() + "@" +
+                Integer.toHexString(honeyProductService.hashCode()));
+        logger.info("OrderService: " + orderService.getClass().getSimpleName() + "@" +
+                Integer.toHexString(orderService.hashCode()));
+        logger.info("ApiaryService: " + apiaryService.getClass().getSimpleName() + "@" +
+                Integer.toHexString(apiaryService.hashCode()));
+
+        // Check observer counts with detailed logging
+        if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+            org.apiary.utils.observer.EventManager<?> eventManager =
+                    (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+            int observerCount = eventManager.countObservers();
+            logger.info("HoneyProductService has " + observerCount + " observers");
+
+            if (observerCount == 0) {
+                logger.warning("WARNING: HoneyProductService has NO observers registered!");
+            } else if (observerCount == 1) {
+                logger.warning("WARNING: HoneyProductService has only 1 observer. Expected 2 (Client + Beekeeper)");
+            } else {
+                logger.info("GOOD: HoneyProductService has multiple observers registered");
+            }
+        }
+
+        if (orderService instanceof org.apiary.utils.observer.EventManager) {
+            org.apiary.utils.observer.EventManager<?> eventManager =
+                    (org.apiary.utils.observer.EventManager<?>) orderService;
+            int observerCount = eventManager.countObservers();
+            logger.info("OrderService has " + observerCount + " observers");
+
+            if (observerCount == 0) {
+                logger.warning("WARNING: OrderService has NO observers registered!");
+            }
+        }
+
+        if (apiaryService instanceof org.apiary.utils.observer.EventManager) {
+            org.apiary.utils.observer.EventManager<?> eventManager =
+                    (org.apiary.utils.observer.EventManager<?>) apiaryService;
+            int observerCount = eventManager.countObservers();
+            logger.info("ApiaryService has " + observerCount + " observers");
+
+            if (observerCount == 0) {
+                logger.warning("WARNING: ApiaryService has NO observers registered!");
+            }
+        }
+
+        logger.info("=== END SERVICE FACTORY INSTANCES ===");
+    }
+
     public static HoneyProductService getHoneyProductService() {
         LOGGER.info("Returning HoneyProductService instance: " +
                 honeyProductService.getClass().getSimpleName() + "@" +

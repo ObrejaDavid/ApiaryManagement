@@ -202,9 +202,15 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         orderStatusFilterComboBox.setValue("All");
     }
 
+
     public void setBeekeeper(Beekeeper beekeeper) {
         this.beekeeper = beekeeper;
         welcomeLabel.setText("Welcome, " + beekeeper.getUsername());
+
+        LOGGER.info("=== BEEKEEPER SET: " + beekeeper.getUsername() + " ===");
+
+        // Verify observer registration after setting beekeeper
+        verifyBeekeeperObserverRegistration();
 
         // Load initial data
         loadApiaries();
@@ -959,11 +965,40 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                             product.getHive(),
                             beekeeper);
 
+
                     if (savedProduct != null) {
+                        LOGGER.info("=== PRODUCT CREATION SUCCESS - TESTING OBSERVER FLOW ===");
                         LOGGER.info("Product created successfully with ID: " + savedProduct.getProductId());
+                        LOGGER.info("Product name: " + savedProduct.getName());
+                        LOGGER.info("Product price: " + savedProduct.getPrice());
+
+                        // Log current observer counts BEFORE the service automatically notifies
+                        try {
+                            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                                org.apiary.utils.observer.EventManager<?> eventManager =
+                                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                                LOGGER.info("About to notify " + eventManager.countObservers() + " observers");
+
+                                if (eventManager.countObservers() < 2) {
+                                    LOGGER.warning("ISSUE DETECTED: Expected at least 2 observers (Client + Beekeeper), but found " +
+                                            eventManager.countObservers());
+                                }
+                            }
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Error checking observer count before notification", e);
+                        }
+
+                        // The service should automatically notify observers at this point
+                        LOGGER.info("Service should have automatically notified observers");
+
+                        // Force log service instances to see current state
+                        ServiceFactory.logServiceInstances();
+
                         loadProductsByFilters();
                         showAlert(Alert.AlertType.INFORMATION, "Success",
-                                "Honey product created successfully. All clients will see this update immediately.");
+                                "Honey product created successfully. All clients should see this update immediately.");
+
+                        LOGGER.info("=== PRODUCT CREATION AND NOTIFICATION FLOW COMPLETED ===");
                     } else {
                         LOGGER.warning("Product creation returned null");
                         showAlert(Alert.AlertType.ERROR, "Error",
@@ -980,6 +1015,57 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             showAlert(Alert.AlertType.ERROR, "Error",
                     "Could not open honey product dialog: " + e.getMessage());
         }
+    }
+
+
+    private void verifyBeekeeperObserverRegistration() {
+        LOGGER.info("=== VERIFYING BEEKEEPER OBSERVER REGISTRATION ===");
+
+        try {
+            // Check HoneyProductService
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                int observerCount = eventManager.countObservers();
+                LOGGER.info("BEEKEEPER: HoneyProductService has " + observerCount + " observers registered");
+
+                if (observerCount == 0) {
+                    LOGGER.warning("BEEKEEPER: No observers registered for HoneyProductService! Re-registering...");
+                    honeyProductService.addObserver(this);
+                }
+            }
+
+            // Check OrderService
+            if (orderService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) orderService;
+                int observerCount = eventManager.countObservers();
+                LOGGER.info("BEEKEEPER: OrderService has " + observerCount + " observers registered");
+
+                if (observerCount == 0) {
+                    LOGGER.warning("BEEKEEPER: No observers registered for OrderService! Re-registering...");
+                    orderService.addObserver(this);
+                }
+            }
+
+            // Check ApiaryService
+            if (apiaryService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) apiaryService;
+                int observerCount = eventManager.countObservers();
+                LOGGER.info("BEEKEEPER: ApiaryService has " + observerCount + " observers registered");
+
+                if (observerCount == 0) {
+                    LOGGER.warning("BEEKEEPER: No observers registered for ApiaryService! Re-registering...");
+                    apiaryService.addObserver(this);
+                }
+            }
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error verifying beekeeper observer registration", e);
+        }
+
+        LOGGER.info("=== BEEKEEPER OBSERVER REGISTRATION VERIFICATION COMPLETED ===");
     }
 
     private void handleEditProduct(HoneyProduct product) {
@@ -1068,6 +1154,25 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         "Failed to delete honey product: " + e.getMessage());
             }
         }
+    }
+
+
+    private void logObserverNotification(String action, HoneyProduct product) {
+        LOGGER.info("=== BEEKEEPER " + action.toUpperCase() + " NOTIFICATION ===");
+        LOGGER.info("Product: " + product.getName() + " | ID: " + product.getProductId());
+
+        // Check if services have observers registered
+        try {
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                LOGGER.info("HoneyProductService has " + eventManager.countObservers() + " observers to notify");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error checking observer count", e);
+        }
+
+        LOGGER.info("=== " + action.toUpperCase() + " NOTIFICATION LOGGED ===");
     }
 
     @FXML

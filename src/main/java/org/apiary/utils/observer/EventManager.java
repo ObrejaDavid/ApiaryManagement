@@ -1,19 +1,20 @@
+// src/main/java/org/apiary/utils/observer/EventManager.java
 package org.apiary.utils.observer;
 
-import com.sun.javafx.logging.PlatformLogger;
 import org.apiary.utils.events.Event;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import static org.hibernate.tool.schema.SchemaToolingLogging.LOGGER;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Base class for implementing the Observable interface
  * @param <E> The type of event to notify observers of
  */
 public class EventManager<E extends Event> implements Observable<E> {
+    private static final Logger LOGGER = Logger.getLogger(EventManager.class.getName());
+
     // Using CopyOnWriteArrayList for thread safety when notifying observers
     private final List<Observer<E>> observers = new CopyOnWriteArrayList<>();
 
@@ -21,6 +22,8 @@ public class EventManager<E extends Event> implements Observable<E> {
     public void addObserver(Observer<E> observer) {
         if (observer != null && !observers.contains(observer)) {
             observers.add(observer);
+            LOGGER.info("Added observer: " + observer.getClass().getSimpleName() +
+                    ". Total observers: " + observers.size());
         }
     }
 
@@ -28,6 +31,8 @@ public class EventManager<E extends Event> implements Observable<E> {
     public void removeObserver(Observer<E> observer) {
         if (observer != null) {
             observers.remove(observer);
+            LOGGER.info("Removed observer: " + observer.getClass().getSimpleName() +
+                    ". Total observers: " + observers.size());
         }
     }
 
@@ -42,12 +47,27 @@ public class EventManager<E extends Event> implements Observable<E> {
                 observer.update(event);
                 LOGGER.info("Observer notification completed for: " + observer.getClass().getSimpleName());
             } catch (Exception e) {
-                LOGGER.error("Error notifying observer: " + observer.getClass().getSimpleName(), e);
+                LOGGER.log(Level.SEVERE, "Error notifying observer: " + observer.getClass().getSimpleName(), e);
             }
         }
 
         LOGGER.info("All observer notifications completed");
     }
+
+
+    public void logObserverDetails() {
+        LOGGER.info("=== OBSERVER DETAILS ===");
+        LOGGER.info("Total observers: " + observers.size());
+
+        for (int i = 0; i < observers.size(); i++) {
+            Observer<E> observer = observers.get(i);
+            LOGGER.info("Observer " + (i + 1) + ": " + observer.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(observer.hashCode()));
+        }
+
+        LOGGER.info("=== END OBSERVER DETAILS ===");
+    }
+
     /**
      * Get the number of observers
      * @return The number of observers
