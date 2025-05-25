@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Entity
-@Table(name = "Order") // Using "Orders" instead of "Order" which might be a reserved word in some databases
+@Table(name = "Orders") // Using "Orders" instead of "Order" which might be a reserved word in some databases
 public class Order {
 
     @Id
