@@ -12,6 +12,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.apiary.model.*;
@@ -24,6 +25,8 @@ import org.apiary.utils.StringUtils;
 import org.apiary.utils.ValidationUtils;
 import org.apiary.utils.events.EntityChangeEvent;
 import org.apiary.utils.observer.Observer;
+
+import org.apiary.model.OrderItem;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -84,6 +87,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     @FXML private TableColumn<Order, String> orderProductsColumn;
     @FXML private TableColumn<Order, BigDecimal> orderTotalColumn;
     @FXML private TableColumn<Order, String> orderStatusColumn;
+    @FXML private TableColumn<Order, Void> orderActionsColumn;
 
     // Model
     private Beekeeper beekeeper;
@@ -367,6 +371,27 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
         orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("total"));
         orderStatusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
+
+        // Add action buttons to order table
+        orderActionsColumn.setCellFactory(col -> new TableCell<Order, Void>() {
+            private final Button viewDetailsButton = new Button("View Details");
+            private final HBox buttonBox = new HBox(5, viewDetailsButton);
+
+            {
+                viewDetailsButton.getStyleClass().add("secondary-button");
+
+                viewDetailsButton.setOnAction(e -> {
+                    Order order = getTableView().getItems().get(getIndex());
+                    handleViewOrderDetails(order);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : buttonBox);
+            }
+        });
     }
 
     private void setupComboBoxes() {
@@ -1162,6 +1187,147 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             LOGGER.log(Level.SEVERE, "Error opening profile dialog", e);
             showAlert(Alert.AlertType.ERROR, "Error",
                     "Could not open profile dialog: " + e.getMessage());
+        }
+    }
+
+    private void handleViewOrderDetails(Order order) {
+        try {
+            // Create a dialog to show order details
+            Dialog<Void> dialog = new Dialog<>();
+            dialog.setTitle("Order #" + order.getOrderId() + " Details");
+            dialog.setHeaderText("Order Details");
+
+            // Create content
+            VBox content = new VBox(10);
+            content.setPadding(new Insets(20));
+            content.setPrefWidth(600);
+
+            // Order info
+            GridPane infoGrid = new GridPane();
+            infoGrid.setHgap(10);
+            infoGrid.setVgap(5);
+
+            infoGrid.add(new Label("Order Number:"), 0, 0);
+            infoGrid.add(new Label("#" + order.getOrderId()), 1, 0);
+
+            infoGrid.add(new Label("Date:"), 0, 1);
+            infoGrid.add(new Label(order.getDate().toString()), 1, 1);
+
+            infoGrid.add(new Label("Customer:"), 0, 2);
+            Client client = order.getClient();
+            String customerName = StringUtils.isBlank(client.getFullName()) ?
+                    client.getUsername() : client.getFullName();
+            infoGrid.add(new Label(customerName), 1, 2);
+
+            infoGrid.add(new Label("Status:"), 0, 3);
+            Label statusLabel = new Label(order.getStatus());
+            statusLabel.getStyleClass().add(
+                    "PAID".equals(order.getStatus()) ? "success-label" :
+                            "PENDING".equals(order.getStatus()) ? "warning-label" :
+                                    "CANCELED".equals(order.getStatus()) ? "danger-label" : "");
+            infoGrid.add(statusLabel, 1, 3);
+
+            content.getChildren().add(infoGrid);
+            content.getChildren().add(new Separator());
+
+            // Order items
+            content.getChildren().add(new Label("Products:"));
+
+            TableView<OrderItem> itemsTable = new TableView<>();
+            itemsTable.setPrefHeight(250);
+
+            TableColumn<OrderItem, String> itemNameCol = new TableColumn<>("Product");
+            itemNameCol.setCellValueFactory(data ->
+                    javafx.beans.binding.Bindings.createStringBinding(
+                            () -> data.getValue().getProduct().getName()));
+            itemNameCol.setPrefWidth(200);
+
+            TableColumn<OrderItem, String> itemApiaryCol = new TableColumn<>("Apiary");
+            itemApiaryCol.setCellValueFactory(data ->
+                    javafx.beans.binding.Bindings.createStringBinding(
+                            () -> data.getValue().getProduct().getApiary().getName()));
+            itemApiaryCol.setPrefWidth(150);
+
+            TableColumn<OrderItem, String> itemHiveCol = new TableColumn<>("Hive");
+            itemHiveCol.setCellValueFactory(data ->
+                    javafx.beans.binding.Bindings.createStringBinding(() -> {
+                        Hive hive = data.getValue().getProduct().getHive();
+                        return hive != null ? "Hive #" + hive.getHiveNumber() : "N/A";
+                    }));
+            itemHiveCol.setPrefWidth(100);
+
+            TableColumn<OrderItem, BigDecimal> itemPriceCol = new TableColumn<>("Unit Price");
+            itemPriceCol.setCellValueFactory(data ->
+                    javafx.beans.binding.Bindings.createObjectBinding(
+                            () -> data.getValue().getPrice()));
+            itemPriceCol.setPrefWidth(100);
+
+            TableColumn<OrderItem, Integer> itemQuantityCol = new TableColumn<>("Quantity");
+            itemQuantityCol.setCellValueFactory(data ->
+                    javafx.beans.binding.Bindings.createObjectBinding(
+                            () -> data.getValue().getQuantity()));
+            itemQuantityCol.setPrefWidth(80);
+
+            TableColumn<OrderItem, BigDecimal> itemTotalCol = new TableColumn<>("Subtotal");
+            itemTotalCol.setCellValueFactory(data ->
+                    javafx.beans.binding.Bindings.createObjectBinding(
+                            () -> data.getValue().getSubtotal()));
+            itemTotalCol.setPrefWidth(100);
+
+            itemsTable.getColumns().addAll(itemNameCol, itemApiaryCol, itemHiveCol,
+                    itemPriceCol, itemQuantityCol, itemTotalCol);
+
+            // Load order items using service
+            List<OrderItem> orderItems = orderService.getOrderItems(order.getOrderId());
+            itemsTable.getItems().addAll(orderItems);
+
+            content.getChildren().add(itemsTable);
+
+            // Total
+            HBox totalBox = new HBox(10);
+            totalBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+            totalBox.setPadding(new Insets(10, 0, 0, 0));
+            Label totalLabel = new Label("Order Total: " + order.getTotal() + " RON");
+            totalLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+            totalBox.getChildren().add(totalLabel);
+            content.getChildren().add(totalBox);
+
+            // Add status change option for beekeepers (if needed)
+            if ("PAID".equals(order.getStatus())) {
+                Separator separator = new Separator();
+                content.getChildren().add(separator);
+
+                HBox statusBox = new HBox(10);
+                statusBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                statusBox.getChildren().add(new Label("Mark as:"));
+
+                Button markDeliveredButton = new Button("Mark as Delivered");
+                markDeliveredButton.getStyleClass().add("primary-button");
+                markDeliveredButton.setOnAction(e -> {
+                    boolean updated = orderService.updateOrderStatus(order.getOrderId(), "DELIVERED");
+                    if (updated) {
+                        showAlert(Alert.AlertType.INFORMATION, "Status Updated",
+                                "Order marked as delivered successfully.");
+                        dialog.close();
+                        loadOrders(); // Refresh the orders table
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Error",
+                                "Failed to update order status.");
+                    }
+                });
+
+                statusBox.getChildren().add(markDeliveredButton);
+                content.getChildren().add(statusBox);
+            }
+
+            dialog.getDialogPane().setContent(content);
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+            dialog.showAndWait();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error showing order details", e);
+            showAlert(Alert.AlertType.ERROR, "Error",
+                    "Could not display order details: " + e.getMessage());
         }
     }
 

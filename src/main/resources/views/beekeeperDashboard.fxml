@@ -159,6 +159,7 @@
                             <TableColumn fx:id="orderProductsColumn" text="Products" prefWidth="200"/>
                             <TableColumn fx:id="orderTotalColumn" text="Total" prefWidth="100"/>
                             <TableColumn fx:id="orderStatusColumn" text="Status" prefWidth="100"/>
+                            <TableColumn fx:id="orderActionsColumn" text="Actions" prefWidth="120"/>
                         </columns>
                         <placeholder>
                             <Label text="No orders found"/>
