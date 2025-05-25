@@ -104,9 +104,23 @@ public class HoneyProductRepositoryImpl extends AbstractRepository<Integer, Hone
     @Override
     public List<HoneyProduct> findAvailableProducts() {
         try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            LOGGER.info("=== REPOSITORY: FINDING AVAILABLE PRODUCTS ===");
+
+            // Clear the session cache to ensure fresh data
+            session.clear();
+
             Query<HoneyProduct> query = session.createQuery(
-                    "FROM HoneyProduct WHERE quantity > 0", HoneyProduct.class);
-            return query.getResultList();
+                    "FROM HoneyProduct WHERE quantity > 0 ORDER BY productId", HoneyProduct.class);
+
+            List<HoneyProduct> products = query.getResultList();
+
+            LOGGER.info("Repository found " + products.size() + " available products");
+            for (HoneyProduct product : products) {
+                LOGGER.info("DB Product: " + product.getName() + " | Price: " + product.getPrice() +
+                        " | Quantity: " + product.getQuantity() + " | ID: " + product.getProductId());
+            }
+
+            return products;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding available honey products", e);
             return List.of();

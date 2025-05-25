@@ -110,6 +110,37 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     private ObservableList<Order> orders;
     private ObservableList<Apiary> apiaries;
 
+
+    /**
+     * Test method to verify observer registration
+     */
+    private void testObserverRegistration() {
+        LOGGER.info("=== TESTING OBSERVER REGISTRATION ===");
+
+        try {
+            // Check if services have observers
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                LOGGER.info("HoneyProductService has " + eventManager.countObservers() + " observers");
+            }
+
+            // Create a test method to manually trigger an update
+            Platform.runLater(() -> {
+                LOGGER.info("Testing manual observer notification...");
+                try {
+                    // Force a product refresh to test the mechanism
+                    forceRefreshProducts();
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error in test observer", e);
+                }
+            });
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error testing observer registration", e);
+        }
+    }
+
     @FXML
     private void initialize() {
         // Initialize services
@@ -121,12 +152,32 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         hiveService = ServiceFactory.getHiveService();
 
         // Register as observer for ALL relevant services for real-time updates
-        honeyProductService.addObserver(this);
-        orderService.addObserver(this);  // NEW: Register for order updates
-        apiaryService.addObserver(this); // NEW: Register for apiary updates
-        hiveService.addObserver(this);   // NEW: Register for hive updates
+        LOGGER.info("=== REGISTERING CLIENT DASHBOARD AS OBSERVER ===");
 
-        LOGGER.info("ClientDashboardController registered as observer for all services");
+        try {
+            honeyProductService.addObserver(this);
+            LOGGER.info("Registered as observer for HoneyProductService");
+
+            orderService.addObserver(this);
+            LOGGER.info("Registered as observer for OrderService");
+
+            apiaryService.addObserver(this);
+            LOGGER.info("Registered as observer for ApiaryService");
+
+            hiveService.addObserver(this);
+            LOGGER.info("Registered as observer for HiveService");
+
+            LOGGER.info("ClientDashboardController registered as observer for all services");
+
+            // Log service instances for debugging
+            LOGGER.info("HoneyProductService instance: " + honeyProductService.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(honeyProductService.hashCode()));
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error registering as observer", e);
+        }
+
+        LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
 
         // Set up filter options
         setupFilterOptions();
@@ -204,101 +255,209 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
 
     @Override
     public void update(EntityChangeEvent<?> event) {
+        LOGGER.info("=== CLIENT DASHBOARD UPDATE METHOD CALLED ===");
+        LOGGER.info("Thread: " + Thread.currentThread().getName());
+        LOGGER.info("Event: " + event.getType() + " | Entity: " + event.getEntityType());
+
+        if (event.getEntity() instanceof HoneyProduct) {
+            HoneyProduct product = (HoneyProduct) event.getEntity();
+            LOGGER.info("Product update received - ID: " + product.getProductId() +
+                    " | Name: " + product.getName() + " | Price: " + product.getPrice());
+        }
+
         if (Platform.isFxApplicationThread()) {
+            LOGGER.info("Already on JavaFX Application Thread, processing immediately");
             handleEntityChangeUpdate(event);
         } else {
-            Platform.runLater(() -> handleEntityChangeUpdate(event));
+            LOGGER.info("Not on JavaFX Application Thread, using Platform.runLater");
+            Platform.runLater(() -> {
+                LOGGER.info("Platform.runLater execution started");
+                handleEntityChangeUpdate(event);
+                LOGGER.info("Platform.runLater execution completed");
+            });
         }
+
+        LOGGER.info("=== CLIENT DASHBOARD UPDATE METHOD COMPLETED ===");
     }
 
     private void handleEntityChangeUpdate(EntityChangeEvent<?> event) {
         try {
-            LOGGER.info("ClientDashboard received entity change event: " +
-                    event.getType() + " for " + event.getEntityType());
+            LOGGER.info("=== CLIENT DASHBOARD PROCESSING ENTITY CHANGE ===");
+            LOGGER.info("Event Type: " + event.getType() + " | Entity Type: " + event.getEntityType());
+            LOGGER.info("Current tab index: " + mainTabPane.getSelectionModel().getSelectedIndex());
 
             switch (event.getEntityType()) {
                 case "HoneyProduct":
-                    LOGGER.info("Refreshing products due to honey product change");
-                    loadProducts();
+                    LOGGER.info("Processing HoneyProduct change event");
+
+                    if (event.getEntity() instanceof HoneyProduct) {
+                        HoneyProduct product = (HoneyProduct) event.getEntity();
+                        LOGGER.info("Updated product details - ID: " + product.getProductId() +
+                                " | Name: " + product.getName() +
+                                " | Price: " + product.getPrice() +
+                                " | Quantity: " + product.getQuantity());
+                    }
+
+                    // Force refresh products regardless of current tab
+                    LOGGER.info("Forcing product refresh...");
+                    forceRefreshProducts();
+
+                    // Show notification to user
+                    Platform.runLater(() -> {
+                        try {
+                            String message = event.getType() == EntityChangeEvent.Type.CREATED ?
+                                    "New honey product available!" : "Product information updated!";
+                            showTemporaryNotification(message);
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Error showing notification", e);
+                        }
+                    });
                     break;
 
                 case "Order":
-                    LOGGER.info("Refreshing orders due to order change");
+                    LOGGER.info("Processing Order change event");
                     loadOrders();
-
-                    // Also refresh cart if it's an order creation (cart might be cleared)
                     if (event.getType() == EntityChangeEvent.Type.CREATED) {
-                        LOGGER.info("New order created, refreshing cart as well");
                         loadCartItems();
                     }
                     break;
 
                 case "Apiary":
-                    LOGGER.info("Refreshing apiaries due to apiary change");
+                    LOGGER.info("Processing Apiary change event");
                     loadApiaries();
-                    // Also refresh products as apiary changes might affect products
-                    loadProducts();
+                    forceRefreshProducts();
                     break;
 
                 case "Hive":
-                    LOGGER.info("Refreshing data due to hive change");
-                    // Hive changes might affect apiaries view and products
+                    LOGGER.info("Processing Hive change event");
                     loadApiaries();
-                    loadProducts();
+                    forceRefreshProducts();
                     break;
 
                 case "CartItem":
-                    LOGGER.info("Refreshing cart due to cart item change");
+                    LOGGER.info("Processing CartItem change event");
                     loadCartItems();
                     break;
 
                 default:
-                    LOGGER.info("Unknown entity type for update: " + event.getEntityType());
+                    LOGGER.info("Unknown entity type: " + event.getEntityType());
                     break;
             }
 
-            // Special handling for order status changes
-            if ("Order".equals(event.getEntityType()) && event.getType() == EntityChangeEvent.Type.UPDATED) {
-                Order updatedOrder = (Order) event.getEntity();
-                Order oldOrder = (Order) event.getOldEntity();
+            LOGGER.info("=== CLIENT DASHBOARD ENTITY CHANGE PROCESSING COMPLETED ===");
 
-                if (oldOrder != null && !oldOrder.getStatus().equals(updatedOrder.getStatus())) {
-                    LOGGER.info("Order status changed from " + oldOrder.getStatus() +
-                            " to " + updatedOrder.getStatus() + " for order #" + updatedOrder.getOrderId());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error handling entity change update in ClientDashboard", e);
+            e.printStackTrace();
+        }
+    }
 
-                    // Show notification to user if it's their order
-                    if (client != null && updatedOrder.getClient().getUserId().equals(client.getUserId())) {
-                        Platform.runLater(() -> {
-                            String message = String.format("Order #%d status updated to: %s",
-                                    updatedOrder.getOrderId(),
-                                    updatedOrder.getStatus());
+    /**
+     * Force refresh products with complete UI clearing
+     */
+    private void forceRefreshProducts() {
+        try {
+            LOGGER.info("=== FORCE REFRESH PRODUCTS STARTED ===");
+            LOGGER.info("Current products container children count: " + productsContainer.getChildren().size());
 
-                            Alert notification = new Alert(Alert.AlertType.INFORMATION);
-                            notification.setTitle("Order Status Update");
-                            notification.setHeaderText("Your Order Has Been Updated");
-                            notification.setContentText(message);
-                            notification.show();
+            // Clear the products container immediately and force layout update
+            productsContainer.getChildren().clear();
+            productsContainer.requestLayout();
 
-                            // Auto-close the notification after 5 seconds
-                            Timeline timeline = new Timeline(new KeyFrame(
-                                    Duration.seconds(5),
-                                    e -> notification.close()
-                            ));
-                            timeline.play();
-                        });
+            LOGGER.info("Products container cleared, children count: " + productsContainer.getChildren().size());
+
+            // Force a layout pass
+            Platform.runLater(() -> {
+                try {
+                    LOGGER.info("=== EXECUTING DELAYED REFRESH ===");
+
+                    // Double-check container is empty
+                    if (!productsContainer.getChildren().isEmpty()) {
+                        LOGGER.warning("Container not empty after clear, forcing clear again");
+                        productsContainer.getChildren().clear();
+                    }
+
+                    // Load fresh products
+                    loadProducts();
+
+                    // Force layout update
+                    productsContainer.requestLayout();
+
+                    LOGGER.info("=== DELAYED REFRESH COMPLETED ===");
+                    LOGGER.info("Final products container children count: " + productsContainer.getChildren().size());
+
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error in delayed product refresh", e);
+                }
+            });
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in forceRefreshProducts", e);
+        }
+    }
+    /**
+     * Debug method to check current UI state
+     */
+    private void debugCurrentUIState() {
+        LOGGER.info("=== DEBUGGING CURRENT UI STATE ===");
+        LOGGER.info("Products container children count: " + productsContainer.getChildren().size());
+
+        for (int i = 0; i < productsContainer.getChildren().size(); i++) {
+            Node child = productsContainer.getChildren().get(i);
+            if (child instanceof VBox) {
+                VBox tile = (VBox) child;
+                LOGGER.info("Tile " + i + " ID: " + tile.getId());
+
+                // Find price label
+                for (Node tileChild : tile.getChildren()) {
+                    if (tileChild instanceof Label) {
+                        Label label = (Label) tileChild;
+                        if (label.getId() != null && label.getId().startsWith("price-")) {
+                            LOGGER.info("  Price label text: '" + label.getText() + "'");
+                        } else if (label.getId() != null && label.getId().startsWith("name-")) {
+                            LOGGER.info("  Name label text: '" + label.getText() + "'");
+                        }
                     }
                 }
             }
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error handling entity change update", e);
         }
+        LOGGER.info("=== UI STATE DEBUG COMPLETED ===");
+    }
+
+    /**
+     * Show a temporary notification to the user
+     */
+    private void showTemporaryNotification(String message) {
+        Platform.runLater(() -> {
+            try {
+                Alert notification = new Alert(Alert.AlertType.INFORMATION);
+                notification.setTitle("Update Notification");
+                notification.setHeaderText("Real-time Update");
+                notification.setContentText(message);
+
+                // Auto-close the notification after 3 seconds
+                Timeline timeline = new Timeline(new KeyFrame(
+                        Duration.seconds(3),
+                        e -> notification.close()
+                ));
+                timeline.play();
+
+                notification.show();
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error showing notification", e);
+            }
+        });
     }
 
     public void setClient(Client client) {
         this.client = client;
         welcomeLabel.setText("Welcome, " + (StringUtils.isBlank(client.getFullName()) ?
                 client.getUsername() : client.getFullName()));
+
+        LOGGER.info("=== CLIENT SET: " + client.getUsername() + " ===");
+
+        // Test observer registration
+        testObserverRegistration();
 
         // Load initial data
         loadProducts();
@@ -542,32 +701,70 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
 
     private void loadProducts() {
         try {
-            // Clear existing products
+            LOGGER.info("=== LOADING PRODUCTS FOR CLIENT DASHBOARD ===");
+            LOGGER.info("Current page: " + currentPage + " | Page size: " + pageSize);
+            LOGGER.info("Search term: '" + currentSearchTerm + "' | Category: " + currentCategory);
+            LOGGER.info("Price range: " + minPrice + " - " + maxPrice);
+
+            // Debug current UI state before clearing
+            debugCurrentUIState();
+
+            // Clear existing products with forced update
+            LOGGER.info("Clearing products container...");
             productsContainer.getChildren().clear();
+            productsContainer.requestLayout();
+
+            // Verify it's actually cleared
+            LOGGER.info("After clear - children count: " + productsContainer.getChildren().size());
 
             // Create pageable for pagination
             Pageable pageable = new Pageable(currentPage, pageSize, currentSortBy, currentSortDir);
 
-            // Get products from service
+            // Get products from service with fresh data
             Page<HoneyProduct> productPage;
             if (!StringUtils.isBlank(currentSearchTerm)) {
+                LOGGER.info("Loading products by search term: " + currentSearchTerm);
                 productPage = honeyProductService.findByNameContaining(
                         currentSearchTerm, currentCategory, minPrice, maxPrice, pageable);
             } else if (currentCategory != null || minPrice != null || maxPrice != null) {
+                LOGGER.info("Loading products with filters");
                 productPage = honeyProductService.findByFilters(
                         currentCategory, minPrice, maxPrice, pageable);
             } else {
+                LOGGER.info("Loading all available products");
                 productPage = honeyProductService.findAvailableProducts(pageable);
             }
+
+            LOGGER.info("Loaded " + productPage.getContent().size() + " products on page " +
+                    (currentPage + 1) + " of " + productPage.getTotalPages());
 
             // Update pagination controls
             totalPages = productPage.getTotalPages();
             updatePaginationControls();
 
-            // Create product tiles
+            // Create product tiles with detailed logging
+            int tileCount = 0;
             for (HoneyProduct product : productPage.getContent()) {
-                createProductTile(product);
+                try {
+                    LOGGER.info("About to create tile for product: " + product.getName() +
+                            " with price: " + product.getPrice());
+                    createProductTile(product);
+                    tileCount++;
+                    LOGGER.info("Successfully created tile " + tileCount + " for product: " + product.getName());
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error creating tile for product: " + product.getName(), e);
+                }
             }
+
+            // Force layout update after all tiles are added
+            productsContainer.requestLayout();
+
+            // Debug final UI state
+            LOGGER.info("After creating tiles - children count: " + productsContainer.getChildren().size());
+            debugCurrentUIState();
+
+            LOGGER.info("=== PRODUCT LOADING COMPLETED - " + tileCount + " tiles created ===");
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading products", e);
             showAlert(Alert.AlertType.ERROR, "Error", "Failed to load products: " + e.getMessage());
@@ -575,6 +772,9 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     }
 
     private void createProductTile(HoneyProduct product) {
+        LOGGER.info("=== CREATING PRODUCT TILE ===");
+        LOGGER.info("Product: " + product.getName() + " | Price: " + product.getPrice() + " | ID: " + product.getProductId());
+
         VBox productTile = new VBox();
         productTile.getStyleClass().add("product-tile");
         productTile.setPrefWidth(200);
@@ -582,38 +782,46 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         productTile.setPadding(new Insets(10));
         productTile.setSpacing(5);
 
-        // Replace the problematic image loading with a simple placeholder
-        ImageView productImage = new ImageView();
-        productImage.setFitWidth(180);
-        productImage.setFitHeight(120);
-        productImage.setPreserveRatio(true);
+        // Set a unique ID for debugging
+        productTile.setId("product-tile-" + product.getProductId());
 
-        // Create a simple colored rectangle as placeholder instead of loading images
+        // Create image placeholder
+        StackPane imageContainer = new StackPane();
+        imageContainer.setPrefSize(180, 120);
+
         Rectangle placeholder = new Rectangle(180, 120);
         placeholder.setFill(Color.LIGHTGOLDENRODYELLOW);
         placeholder.setStroke(Color.DARKGOLDENROD);
         placeholder.setStrokeWidth(2);
 
-        // Create a container for the placeholder
-        StackPane imageContainer = new StackPane();
-        imageContainer.setPrefSize(180, 120);
-        imageContainer.getChildren().add(placeholder);
-
-        // Add a honey icon text as placeholder
         Label honeyIcon = new Label("🍯");
         honeyIcon.setStyle("-fx-font-size: 36px;");
-        imageContainer.getChildren().add(honeyIcon);
 
+        imageContainer.getChildren().addAll(placeholder, honeyIcon);
+
+        // Product name
         Label nameLabel = new Label(product.getName());
         nameLabel.getStyleClass().add("product-name");
         nameLabel.setWrapText(true);
+        nameLabel.setId("name-" + product.getProductId());
 
+        // Apiary name
         Label apiaryLabel = new Label("From: " + product.getApiary().getName());
         apiaryLabel.setWrapText(true);
+        apiaryLabel.setId("apiary-" + product.getProductId());
 
-        Label priceLabel = new Label(product.getPrice() + " RON");
+        // Price label - FORCE the text update
+        Label priceLabel = new Label();
         priceLabel.getStyleClass().add("product-price");
+        priceLabel.setId("price-" + product.getProductId());
 
+        // Force text update with explicit string conversion
+        String priceText = String.format("%.2f RON", product.getPrice().doubleValue());
+        priceLabel.setText(priceText);
+
+        LOGGER.info("Setting price label text to: '" + priceText + "' for product: " + product.getName());
+
+        // Buttons
         Button viewButton = new Button("View Details");
         viewButton.getStyleClass().add("secondary-button");
         viewButton.setOnAction(e -> handleViewProductDetails(product));
@@ -623,12 +831,20 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         addToCartButton.setMaxWidth(Double.MAX_VALUE);
         addToCartButton.setOnAction(e -> handleQuickAddToCart(product));
 
+        // Add all components
         productTile.getChildren().addAll(
                 imageContainer, nameLabel, apiaryLabel, priceLabel,
                 new Region(), viewButton, addToCartButton);
         VBox.setVgrow(viewButton, Priority.ALWAYS);
 
+        // Force layout update
+        productTile.autosize();
+
+        // Add to container and force immediate layout
         productsContainer.getChildren().add(productTile);
+
+        LOGGER.info("Product tile created and added to container for: " + product.getName() +
+                " with price: " + priceText);
     }
 
     private void updatePaginationControls() {

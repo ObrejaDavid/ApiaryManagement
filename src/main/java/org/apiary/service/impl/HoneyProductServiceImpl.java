@@ -41,6 +41,10 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
                                            BigDecimal quantity, Apiary apiary, Hive hive,
                                            Beekeeper beekeeper) {
         try {
+            LOGGER.info("=== CREATING HONEY PRODUCT ===");
+            LOGGER.info("Product: " + name + " | Price: " + price + " | Quantity: " + quantity);
+            LOGGER.info("Beekeeper: " + beekeeper.getUsername() + " | Apiary: " + apiary.getName());
+
             // Check if apiary belongs to beekeeper
             if (!apiaryService.isApiaryOwnedByBeekeeper(beekeeper, apiary.getApiaryId())) {
                 LOGGER.warning("Apiary does not belong to beekeeper: " +
@@ -59,11 +63,15 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
             product.setHive(hive);
 
             HoneyProduct savedProduct = honeyProductRepository.save(product);
+            LOGGER.info("Product saved with ID: " + savedProduct.getProductId());
 
-            // Notify observers
-            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedProduct));
+            // Notify observers with detailed logging
+            LOGGER.info("Notifying " + countObservers() + " observers about new product creation");
+            EntityChangeEvent<HoneyProduct> event = new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedProduct);
+            notifyObservers(event);
+            LOGGER.info("Observer notification completed for product creation");
 
-            LOGGER.info("Created new honey product: " + name + " for apiary: " + apiary.getName());
+            LOGGER.info("=== HONEY PRODUCT CREATION COMPLETED ===");
             return savedProduct;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error creating honey product: " + name, e);
@@ -76,6 +84,10 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
                                            BigDecimal price, BigDecimal quantity,
                                            Beekeeper beekeeper) {
         try {
+            LOGGER.info("=== UPDATING HONEY PRODUCT ===");
+            LOGGER.info("Product ID: " + productId + " | New Price: " + price + " | New Quantity: " + quantity);
+            LOGGER.info("Beekeeper: " + beekeeper.getUsername());
+
             Optional<HoneyProduct> productOpt = honeyProductRepository.findById(productId);
             if (productOpt.isEmpty()) {
                 LOGGER.warning("Honey product not found: " + productId);
@@ -83,10 +95,14 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
             }
 
             HoneyProduct product = productOpt.get();
+
+            // Create old product snapshot for comparison
             HoneyProduct oldProduct = new HoneyProduct(product.getName(), product.getDescription(),
                     product.getPrice(), product.getQuantity(), product.getApiary());
             oldProduct.setProductId(product.getProductId());
             oldProduct.setHive(product.getHive());
+
+            LOGGER.info("Old product values - Price: " + oldProduct.getPrice() + " | Quantity: " + oldProduct.getQuantity());
 
             // Check if product belongs to beekeeper
             if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
@@ -95,17 +111,22 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
                 return null;
             }
 
+            // Update product fields
             product.setName(name);
             product.setDescription(description);
             product.setPrice(price);
             product.setQuantity(quantity);
 
             HoneyProduct updatedProduct = honeyProductRepository.save(product);
+            LOGGER.info("Product updated successfully. New values - Price: " + updatedProduct.getPrice() + " | Quantity: " + updatedProduct.getQuantity());
 
-            // Notify observers
-            notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedProduct, oldProduct));
+            // Notify observers with detailed logging
+            LOGGER.info("Notifying " + countObservers() + " observers about product update");
+            EntityChangeEvent<HoneyProduct> event = new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedProduct, oldProduct);
+            notifyObservers(event);
+            LOGGER.info("Observer notification completed for product update");
 
-            LOGGER.info("Updated honey product: " + productId);
+            LOGGER.info("=== HONEY PRODUCT UPDATE COMPLETED ===");
             return updatedProduct;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error updating honey product: " + productId, e);
@@ -363,8 +384,24 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
     @Override
     public Page<HoneyProduct> findAvailableProducts(Pageable pageable) {
         try {
+            LOGGER.info("=== FINDING AVAILABLE PRODUCTS (WITH FRESH DATA) ===");
+            LOGGER.info("Page: " + pageable.getPage() + " | Size: " + pageable.getSize());
+
+            // Get fresh data from repository (not cached)
             List<HoneyProduct> availableProducts = honeyProductRepository.findAvailableProducts();
-            return PaginationUtils.createPage(availableProducts, pageable);
+
+            LOGGER.info("Found " + availableProducts.size() + " available products from database");
+
+            // Log each product for debugging
+            for (HoneyProduct product : availableProducts) {
+                LOGGER.info("Product: " + product.getName() + " | Price: " + product.getPrice() +
+                        " | Quantity: " + product.getQuantity() + " | ID: " + product.getProductId());
+            }
+
+            Page<HoneyProduct> result = PaginationUtils.createPage(availableProducts, pageable);
+            LOGGER.info("Created page with " + result.getContent().size() + " products");
+
+            return result;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding available products", e);
             return new Page<>(List.of(), pageable.getPage(), pageable.getSize(), 0);

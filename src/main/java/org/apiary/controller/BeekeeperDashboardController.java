@@ -113,9 +113,29 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         orderService = ServiceFactory.getOrderService();
 
         // Register as observer for entity changes
-        apiaryService.addObserver(this);
-        hiveService.addObserver(this);
-        honeyProductService.addObserver(this);
+        LOGGER.info("=== REGISTERING BEEKEEPER DASHBOARD AS OBSERVER ===");
+
+        try {
+            apiaryService.addObserver(this);
+            LOGGER.info("Registered as observer for ApiaryService");
+
+            hiveService.addObserver(this);
+            LOGGER.info("Registered as observer for HiveService");
+
+            honeyProductService.addObserver(this);
+            LOGGER.info("Registered as observer for HoneyProductService");
+
+            LOGGER.info("BeekeeperDashboardController registered as observer for all services");
+
+            // Log service instances for debugging
+            LOGGER.info("HoneyProductService instance: " + honeyProductService.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(honeyProductService.hashCode()));
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error registering as observer", e);
+        }
+
+        LOGGER.info("=== BEEKEEPER DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
 
         // Initialize observable lists
         apiaries = FXCollections.observableArrayList();
@@ -926,6 +946,10 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Optional<HoneyProduct> result = dialog.showAndWait();
             result.ifPresent(product -> {
                 try {
+                    LOGGER.info("=== BEEKEEPER ADDING NEW PRODUCT ===");
+                    LOGGER.info("Product: " + product.getName() + " | Price: " + product.getPrice() +
+                            " | Quantity: " + product.getQuantity());
+
                     HoneyProduct savedProduct = honeyProductService.createHoneyProduct(
                             product.getName(),
                             product.getDescription(),
@@ -936,10 +960,12 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                             beekeeper);
 
                     if (savedProduct != null) {
+                        LOGGER.info("Product created successfully with ID: " + savedProduct.getProductId());
                         loadProductsByFilters();
                         showAlert(Alert.AlertType.INFORMATION, "Success",
-                                "Honey product created successfully.");
+                                "Honey product created successfully. All clients will see this update immediately.");
                     } else {
+                        LOGGER.warning("Product creation returned null");
                         showAlert(Alert.AlertType.ERROR, "Error",
                                 "Failed to create honey product.");
                     }
@@ -979,6 +1005,11 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Optional<HoneyProduct> result = dialog.showAndWait();
             result.ifPresent(updatedProduct -> {
                 try {
+                    LOGGER.info("=== BEEKEEPER UPDATING PRODUCT ===");
+                    LOGGER.info("Product ID: " + updatedProduct.getProductId());
+                    LOGGER.info("Old Price: " + product.getPrice() + " -> New Price: " + updatedProduct.getPrice());
+                    LOGGER.info("Old Quantity: " + product.getQuantity() + " -> New Quantity: " + updatedProduct.getQuantity());
+
                     HoneyProduct savedProduct = honeyProductService.updateHoneyProduct(
                             updatedProduct.getProductId(),
                             updatedProduct.getName(),
@@ -988,10 +1019,13 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                             beekeeper);
 
                     if (savedProduct != null) {
+                        LOGGER.info("Product updated successfully. New Price: " + savedProduct.getPrice() +
+                                " | New Quantity: " + savedProduct.getQuantity());
                         loadProductsByFilters();
                         showAlert(Alert.AlertType.INFORMATION, "Success",
-                                "Honey product updated successfully.");
+                                "Honey product updated successfully. All clients will see this update immediately.");
                     } else {
+                        LOGGER.warning("Product update returned null");
                         showAlert(Alert.AlertType.ERROR, "Error",
                                 "Failed to update honey product.");
                     }

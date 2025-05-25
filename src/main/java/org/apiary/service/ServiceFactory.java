@@ -1,16 +1,17 @@
-// File: src/main/java/org/apiary/service/ServiceFactory.java
-// Replace the entire content
-
 package org.apiary.service;
 
 import org.apiary.repository.RepositoryFactory;
 import org.apiary.service.impl.*;
 import org.apiary.service.interfaces.*;
 
+import java.util.logging.Logger;
+
 /**
  * Factory class for creating service instances
  */
 public class ServiceFactory {
+
+    private static final Logger LOGGER = Logger.getLogger(ServiceFactory.class.getName());
 
     // Services
     private static final UserService userService = new UserServiceImpl(
@@ -36,7 +37,6 @@ public class ServiceFactory {
     private static final PaymentService paymentService = new PaymentServiceImpl(
             RepositoryFactory.getPaymentRepository());
 
-    // OrderService now extends EventManager and implements Observable
     private static final OrderService orderService = new OrderServiceImpl(
             RepositoryFactory.getOrderRepository(),
             RepositoryFactory.getOrderItemRepository(),
@@ -49,6 +49,13 @@ public class ServiceFactory {
         // Private constructor to prevent instantiation
     }
 
+    public static HoneyProductService getHoneyProductService() {
+        LOGGER.info("Returning HoneyProductService instance: " +
+                honeyProductService.getClass().getSimpleName() + "@" +
+                Integer.toHexString(honeyProductService.hashCode()));
+        return honeyProductService;
+    }
+
     public static UserService getUserService() {
         return userService;
     }
@@ -59,10 +66,6 @@ public class ServiceFactory {
 
     public static HiveService getHiveService() {
         return hiveService;
-    }
-
-    public static HoneyProductService getHoneyProductService() {
-        return honeyProductService;
     }
 
     public static ShoppingCartService getShoppingCartService() {
