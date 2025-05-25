@@ -8,6 +8,7 @@ import org.apiary.service.interfaces.OrderService;
 import org.apiary.service.interfaces.PaymentService;
 import org.apiary.service.interfaces.ShoppingCartService;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -39,9 +40,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order createOrderFromCart(Client client) {
         try {
-            LOGGER.info("Starting order creation for client: " + client.getUsername());
+            LOGGER.info("=== STARTING ORDER CREATION DEBUG ===");
+            LOGGER.info("Client: " + client.getUsername() + " (ID: " + client.getUserId() + ")");
 
-            // Get cart items
+            // Get cart items with detailed logging
             List<CartItem> cartItems = shoppingCartService.getCartItems(client);
             LOGGER.info("Found " + cartItems.size() + " cart items");
 
@@ -50,47 +52,102 @@ public class OrderServiceImpl implements OrderService {
                 return null;
             }
 
+            // Log each cart item
+            for (int i = 0; i < cartItems.size(); i++) {
+                CartItem item = cartItems.get(i);
+                LOGGER.info("Cart Item " + (i+1) + ": " + item.getProduct().getName() +
+                        " | Quantity: " + item.getQuantity() +
+                        " | Price: " + item.getPrice() +
+                        " | Product ID: " + item.getProduct().getProductId());
+
+                // Check product availability
+                Optional<HoneyProduct> productOpt = honeyProductService.findById(item.getProduct().getProductId());
+                if (productOpt.isEmpty()) {
+                    LOGGER.severe("Product not found in database: " + item.getProduct().getProductId());
+                    return null;
+                }
+
+                HoneyProduct product = productOpt.get();
+                LOGGER.info("Product available quantity: " + product.getQuantity());
+
+                if (product.getQuantity().compareTo(BigDecimal.valueOf(item.getQuantity())) < 0) {
+                    LOGGER.severe("Insufficient stock for product: " + product.getName() +
+                            " (Available: " + product.getQuantity() + ", Requested: " + item.getQuantity() + ")");
+                    return null;
+                }
+            }
+
             // Create order
+            LOGGER.info("Creating new order object...");
             Order order = new Order(client);
-            LOGGER.info("Created new order object");
+            LOGGER.info("Order object created successfully");
 
-            // Save order first
-            Order savedOrder = orderRepository.save(order);
-            LOGGER.info("Saved order with ID: " + savedOrder.getOrderId());
+            // Verify client is properly attached
+            if (order.getClient() == null || order.getClient().getUserId() == null) {
+                LOGGER.severe("Client is not properly attached to order");
+                return null;
+            }
+            LOGGER.info("Client properly attached to order");
 
-            // Create order items from cart items
+            // Create order items
+            LOGGER.info("Creating order items...");
             for (CartItem cartItem : cartItems) {
-                LOGGER.info("Processing cart item: " + cartItem.getProduct().getName());
+                try {
+                    LOGGER.info("Processing cart item: " + cartItem.getProduct().getName());
 
-                OrderItem orderItem = new OrderItem(
-                        savedOrder,
-                        cartItem.getProduct(),
-                        cartItem.getQuantity(),
-                        cartItem.getPrice());
+                    OrderItem orderItem = new OrderItem(
+                            order,
+                            cartItem.getProduct(),
+                            cartItem.getQuantity(),
+                            cartItem.getPrice());
 
-                OrderItem savedOrderItem = orderItemRepository.save(orderItem);
-                LOGGER.info("Saved order item with ID: " + savedOrderItem.getOrderItemId());
+                    // Add to order's items list
+                    order.getItems().add(orderItem);
+                    LOGGER.info("Added order item successfully");
 
-                // Add order item to order
-                savedOrder.addItem(orderItem);
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error creating order item for product: " +
+                            cartItem.getProduct().getName(), e);
+                    return null;
+                }
             }
 
             // Calculate total
-            savedOrder.recalculateTotal();
-            LOGGER.info("Order total calculated: " + savedOrder.getTotal());
+            LOGGER.info("Calculating order total...");
+            try {
+                order.recalculateTotal();
+                LOGGER.info("Order total calculated: " + order.getTotal());
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error calculating order total", e);
+                return null;
+            }
 
-            // Save order again with items
-            savedOrder = orderRepository.save(savedOrder);
-            LOGGER.info("Final order save completed");
+            // Save order
+            LOGGER.info("Attempting to save order to database...");
+            try {
+                Order savedOrder = orderRepository.save(order);
+                if (savedOrder == null) {
+                    LOGGER.severe("Repository returned null after save attempt");
+                    return null;
+                }
 
-            // Don't clear cart here - do it after payment confirmation
-            // shoppingCartService.clearCart(client);
+                if (savedOrder.getOrderId() == null) {
+                    LOGGER.severe("Saved order has null ID");
+                    return null;
+                }
 
-            LOGGER.info("Successfully created order from cart for client: " + client.getUsername());
-            return savedOrder;
+                LOGGER.info("Order saved successfully with ID: " + savedOrder.getOrderId());
+                LOGGER.info("=== ORDER CREATION COMPLETED SUCCESSFULLY ===");
+                return savedOrder;
+
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Database error while saving order", e);
+                return null;
+            }
+
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error creating order from cart for client: " + client.getUsername(), e);
-            e.printStackTrace(); // This will help us see the full stack trace
+            LOGGER.log(Level.SEVERE, "Unexpected error creating order from cart for client: " + client.getUsername(), e);
+            e.printStackTrace();
             return null;
         }
     }

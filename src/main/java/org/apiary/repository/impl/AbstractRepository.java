@@ -56,15 +56,27 @@ public abstract class AbstractRepository<ID, T> implements Repository<ID, T> {
     public T save(T entity) {
         Transaction transaction = null;
         try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            LOGGER.info("Opening database session for save operation");
             transaction = session.beginTransaction();
+            LOGGER.info("Transaction started");
+
             session.saveOrUpdate(entity);
+            LOGGER.info("Entity saveOrUpdate called");
+
             transaction.commit();
+            LOGGER.info("Transaction committed successfully");
+
             return entity;
         } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in save operation", e);
             if (transaction != null) {
-                transaction.rollback();
+                try {
+                    transaction.rollback();
+                    LOGGER.info("Transaction rolled back");
+                } catch (Exception rollbackEx) {
+                    LOGGER.log(Level.SEVERE, "Error rolling back transaction", rollbackEx);
+                }
             }
-            LOGGER.log(Level.SEVERE, "Error saving entity", e);
             return null;
         }
     }

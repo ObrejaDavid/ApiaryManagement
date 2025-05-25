@@ -52,11 +52,23 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         try {
             Optional<ShoppingCart> cartOpt = findByClient(client);
             if (cartOpt.isEmpty()) {
+                LOGGER.info("No shopping cart found for client: " + client.getUsername());
                 return List.of();
             }
 
             ShoppingCart cart = cartOpt.get();
-            return cartItemRepository.findByCart(cart);
+            List<CartItem> items = cartItemRepository.findByCart(cart);
+
+            LOGGER.info("Found " + items.size() + " items in cart for client: " + client.getUsername());
+            for (CartItem item : items) {
+                LOGGER.info("Cart item: " + item.getProduct().getName() +
+                        " | Quantity: " + item.getQuantity() +
+                        " | Price: " + item.getPrice() +
+                        " | Item ID: " + item.getItemId() +
+                        " | Product ID: " + item.getProduct().getProductId());
+            }
+
+            return items;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error getting cart items for client: " + client.getUsername(), e);
             return List.of();

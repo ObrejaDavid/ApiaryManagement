@@ -6,11 +6,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
+import org.apiary.config.HibernateConfig;
 import org.apiary.model.CartItem;
 import org.apiary.model.Client;
 import org.apiary.service.ServiceFactory;
 import org.apiary.service.interfaces.OrderService;
 import org.apiary.service.interfaces.ShoppingCartService;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -228,7 +231,35 @@ public class CheckoutController {
                 return;
             }
 
+            // TEST DATABASE CONNECTION FIRST
+            LOGGER.info("Testing database connection...");
+            try {
+                SessionFactory sessionFactory = HibernateConfig.getSessionFactory();
+                try (Session testSession = sessionFactory.openSession()) {
+                    testSession.beginTransaction();
+                    Long userCount = testSession.createQuery("SELECT COUNT(*) FROM User", Long.class).uniqueResult();
+                    testSession.getTransaction().commit();
+                    LOGGER.info("Database connection test successful. User count: " + userCount);
+                }
+            } catch (Exception dbTest) {
+                LOGGER.log(Level.SEVERE, "Database connection test failed", dbTest);
+                showAlert(Alert.AlertType.ERROR, "Database Error",
+                        "Cannot connect to database: " + dbTest.getMessage() +
+                                "\n\nPlease check your database connection and try again.");
+                return;
+            }
+
             LOGGER.info("Starting order placement for client: " + client.getUsername());
+
+            // Verify cart items are still available
+            List<CartItem> currentCartItems = shoppingCartService.getCartItems(client);
+            if (currentCartItems.isEmpty()) {
+                showAlert(Alert.AlertType.ERROR, "Cart Error",
+                        "Your cart appears to be empty. Please add items before checking out.");
+                return;
+            }
+
+            LOGGER.info("Cart verification successful, proceeding with order creation");
 
             // Create order from cart
             var order = orderService.createOrderFromCart(client);
@@ -241,7 +272,12 @@ public class CheckoutController {
                     LOGGER.info("Payment processed successfully for order: " + order.getOrderId());
 
                     // Clear cart after successful payment
-                    shoppingCartService.clearCart(client);
+                    boolean cartCleared = shoppingCartService.clearCart(client);
+                    if (cartCleared) {
+                        LOGGER.info("Cart cleared successfully");
+                    } else {
+                        LOGGER.warning("Failed to clear cart after successful order");
+                    }
 
                     orderNumberLabel.setText("Order #" + order.getOrderId());
                     confirmationTotalLabel.setText(order.getTotal() + " RON");
@@ -249,21 +285,25 @@ public class CheckoutController {
                 } else {
                     LOGGER.warning("Payment failed for order: " + order.getOrderId());
                     showAlert(Alert.AlertType.ERROR, "Payment Failed",
-                            "Payment could not be processed. Please try again or use a different payment method.");
+                            "Payment could not be processed. Please check your payment information and try again.");
                 }
             } else {
                 LOGGER.severe("Order creation returned null for client: " + client.getUsername());
                 showAlert(Alert.AlertType.ERROR, "Order Failed",
-                        "Could not create order. Please check your cart and try again. If the problem persists, please contact support.");
+                        "Could not create order. Please check the application logs for detailed error information. " +
+                                "Common causes:\n" +
+                                "• Database connectivity issues\n" +
+                                "• Insufficient product stock\n" +
+                                "• Invalid cart items\n\n" +
+                                "Please try refreshing the page and trying again.");
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error placing order for client: " + client.getUsername(), e);
             showAlert(Alert.AlertType.ERROR, "Error",
-                    "An unexpected error occurred while placing your order: " + e.getMessage() +
-                            ". Please try again or contact support.");
+                    "An unexpected error occurred: " + e.getClass().getSimpleName() +
+                            ": " + e.getMessage());
         }
     }
-
     private boolean validatePaymentDetails() {
         if (creditCardRadioButton.isSelected()) {
             if (cardNumberField.getText().trim().isEmpty()) {
