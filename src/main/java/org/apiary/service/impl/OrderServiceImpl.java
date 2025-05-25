@@ -89,7 +89,7 @@ public class OrderServiceImpl implements OrderService {
             }
             LOGGER.info("Client properly attached to order");
 
-            // Create order items
+            // Create order items - FIXED VERSION
             LOGGER.info("Creating order items...");
             for (CartItem cartItem : cartItems) {
                 try {
@@ -101,8 +101,8 @@ public class OrderServiceImpl implements OrderService {
                             cartItem.getQuantity(),
                             cartItem.getPrice());
 
-                    // Add to order's items list
-                    order.getItems().add(orderItem);
+                    // Use the proper addItem method which handles bidirectional relationship
+                    order.addItem(orderItem);
                     LOGGER.info("Added order item successfully");
 
                 } catch (Exception e) {
@@ -112,15 +112,8 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // Calculate total
-            LOGGER.info("Calculating order total...");
-            try {
-                order.recalculateTotal();
-                LOGGER.info("Order total calculated: " + order.getTotal());
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error calculating order total", e);
-                return null;
-            }
+            // Remove manual recalculateTotal() since addItem() already does this
+            // order.recalculateTotal(); // REMOVE THIS LINE
 
             // Save order
             LOGGER.info("Attempting to save order to database...");
@@ -137,6 +130,11 @@ public class OrderServiceImpl implements OrderService {
                 }
 
                 LOGGER.info("Order saved successfully with ID: " + savedOrder.getOrderId());
+
+                // Clear cart after successful order creation
+                shoppingCartService.clearCart(client);
+                LOGGER.info("Cart cleared successfully");
+
                 LOGGER.info("=== ORDER CREATION COMPLETED SUCCESSFULLY ===");
                 return savedOrder;
 

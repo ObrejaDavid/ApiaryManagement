@@ -71,8 +71,13 @@ public abstract class AbstractRepository<ID, T> implements Repository<ID, T> {
             LOGGER.log(Level.SEVERE, "Error in save operation", e);
             if (transaction != null) {
                 try {
-                    transaction.rollback();
-                    LOGGER.info("Transaction rolled back");
+                    // Check if transaction is still active before rolling back
+                    if (transaction.getStatus().canRollback()) {
+                        transaction.rollback();
+                        LOGGER.info("Transaction rolled back");
+                    } else {
+                        LOGGER.info("Transaction was already rolled back or committed");
+                    }
                 } catch (Exception rollbackEx) {
                     LOGGER.log(Level.SEVERE, "Error rolling back transaction", rollbackEx);
                 }
