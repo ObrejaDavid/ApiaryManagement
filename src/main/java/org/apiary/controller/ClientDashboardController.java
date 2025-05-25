@@ -158,49 +158,10 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             hiveService = ServiceFactory.getHiveService();
 
             LOGGER.info("Services obtained successfully");
-            LOGGER.info("HoneyProductService instance: " + honeyProductService.getClass().getSimpleName() + "@" +
-                    Integer.toHexString(honeyProductService.hashCode()));
 
-            // Register as observer for ALL relevant services for real-time updates
-            LOGGER.info("=== REGISTERING CLIENT DASHBOARD AS OBSERVER ===");
+            // DO NOT register observers here - wait for setClient()
 
-            // Check observer count BEFORE registration
-            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
-                org.apiary.utils.observer.EventManager<?> eventManager =
-                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
-                LOGGER.info("BEFORE CLIENT registration - HoneyProductService has " + eventManager.countObservers() + " observers");
-                eventManager.logObserverDetails();
-            }
-
-            // Register for HoneyProductService
-            LOGGER.info("About to register ClientDashboard for HoneyProductService...");
-            honeyProductService.addObserver(this);
-            LOGGER.info("ClientDashboard registration for HoneyProductService completed");
-
-            // Check observer count AFTER registration
-            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
-                org.apiary.utils.observer.EventManager<?> eventManager =
-                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
-                LOGGER.info("AFTER CLIENT registration - HoneyProductService has " + eventManager.countObservers() + " observers");
-                eventManager.logObserverDetails();
-            }
-
-            // Register for other services
-            LOGGER.info("Registering for OrderService...");
-            orderService.addObserver(this);
-            LOGGER.info("OrderService registration completed");
-
-            LOGGER.info("Registering for ApiaryService...");
-            apiaryService.addObserver(this);
-            LOGGER.info("ApiaryService registration completed");
-
-            LOGGER.info("Registering for HiveService...");
-            hiveService.addObserver(this);
-            LOGGER.info("HiveService registration completed");
-
-            LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
-
-            // Continue with rest of initialization
+            // Setup UI components
             LOGGER.info("Setting up filter options...");
             setupFilterOptions();
 
@@ -217,16 +178,16 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             ordersTable.setItems(orders);
             apiariesTable.setItems(apiaries);
 
-            // Set up search listeners and other initialization...
+            // Set up event listeners
             LOGGER.info("Setting up event listeners...");
             setupEventListeners();
 
-            LOGGER.info("=== CLIENT DASHBOARD INITIALIZE COMPLETED SUCCESSFULLY ===");
+            LOGGER.info("=== CLIENT DASHBOARD INITIALIZE COMPLETED ===");
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "CRITICAL ERROR in ClientDashboard initialize()", e);
             e.printStackTrace();
-            throw e; // Re-throw to see if this is causing silent failures
+            throw e;
         }
     }
 
@@ -558,22 +519,123 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
 
         LOGGER.info("=== CLIENT SET: " + client.getUsername() + " ===");
 
+        // NOW register as observer - this ensures proper timing
+        registerAsObserver();
+
         // Verify observer registration
         verifyObserverRegistration();
 
         // Load initial data
         loadProducts();
+    }
 
-        // ADD THIS FOR AUTOMATIC TESTING
-        Platform.runLater(() -> {
-            try {
-                Thread.sleep(2000); // Wait 2 seconds for everything to load
-                LOGGER.info("=== RUNNING AUTOMATIC OBSERVER TEST ===");
-                handleTestObserverNotification();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Error in automatic observer test", e);
+    /**
+     * Register this controller as observer for all relevant services
+     */
+    private void registerAsObserver() {
+        LOGGER.info("=== REGISTERING CLIENT DASHBOARD AS OBSERVER ===");
+
+        try {
+            // Check current observer count before registration
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                LOGGER.info("BEFORE CLIENT registration - HoneyProductService has " +
+                        eventManager.countObservers() + " observers");
             }
-        });
+
+            // Register for all services
+            LOGGER.info("Registering ClientDashboard for HoneyProductService...");
+            honeyProductService.addObserver(this);
+
+            LOGGER.info("Registering ClientDashboard for OrderService...");
+            orderService.addObserver(this);
+
+            LOGGER.info("Registering ClientDashboard for ApiaryService...");
+            apiaryService.addObserver(this);
+
+            LOGGER.info("Registering ClientDashboard for HiveService...");
+            hiveService.addObserver(this);
+
+            // Check observer count after registration
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                LOGGER.info("AFTER CLIENT registration - HoneyProductService has " +
+                        eventManager.countObservers() + " observers");
+                eventManager.logObserverDetails();
+            }
+
+            LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "CRITICAL ERROR registering CLIENT as observer", e);
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Verify and force observer registration if needed
+     */
+    public void verifyAndForceObserverRegistration() {
+        LOGGER.info("=== VERIFYING AND FORCING OBSERVER REGISTRATION ===");
+
+        try {
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                int observerCount = eventManager.countObservers();
+
+                LOGGER.info("Current HoneyProductService observer count: " + observerCount);
+
+                // If we don't see ourselves in the observers, re-register
+                if (observerCount < 2) {
+                    LOGGER.warning("Expected 2 observers but found " + observerCount + ". Re-registering...");
+
+                    // Re-register
+                    honeyProductService.addObserver(this);
+                    orderService.addObserver(this);
+                    apiaryService.addObserver(this);
+                    hiveService.addObserver(this);
+
+                    // Check again
+                    int newCount = eventManager.countObservers();
+                    LOGGER.info("After re-registration: " + newCount + " observers");
+                    eventManager.logObserverDetails();
+                }
+            }
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in verify and force registration", e);
+        }
+    }
+
+    /**
+     * Clean up observers when window is closed
+     */
+    public void cleanup() {
+        LOGGER.info("=== CLEANING UP CLIENT DASHBOARD OBSERVERS ===");
+        try {
+            if (honeyProductService != null) {
+                honeyProductService.removeObserver(this);
+                LOGGER.info("Removed observer from HoneyProductService");
+            }
+            if (orderService != null) {
+                orderService.removeObserver(this);
+                LOGGER.info("Removed observer from OrderService");
+            }
+            if (apiaryService != null) {
+                apiaryService.removeObserver(this);
+                LOGGER.info("Removed observer from ApiaryService");
+            }
+            if (hiveService != null) {
+                hiveService.removeObserver(this);
+                LOGGER.info("Removed observer from HiveService");
+            }
+            LOGGER.info("=== CLIENT DASHBOARD CLEANUP COMPLETED ===");
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error during cleanup", e);
+        }
     }
 
 
@@ -1527,4 +1589,5 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         alert.setContentText(message);
         alert.showAndWait();
     }
+
 }

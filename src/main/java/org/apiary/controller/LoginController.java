@@ -295,47 +295,64 @@ public class LoginController {
     private void openClientDashboard(Client client) {
         try {
             LOGGER.info("=== OPENING CLIENT DASHBOARD ===");
-            LOGGER.info("Loading FXML...");
 
             // Load the client dashboard
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/clientDashboard.fxml"));
             Parent root = loader.load();
 
-            LOGGER.info("FXML loaded successfully");
-
-            // Get controller and set client
+            // Get controller
             ClientDashboardController controller = loader.getController();
             LOGGER.info("Controller obtained: " + controller.getClass().getSimpleName() + "@" +
                     Integer.toHexString(controller.hashCode()));
 
-            // Set client immediately (no Platform.runLater)
-            LOGGER.info("Setting client on controller...");
-            controller.setClient(client);
-            LOGGER.info("Client set on controller successfully");
-
-            // CREATE NEW WINDOW
+            // CREATE STAGE AND STORE CONTROLLER REFERENCE IMMEDIATELY
             Stage clientStage = new Stage();
             clientStage.setScene(new Scene(root));
             clientStage.setTitle("Client Dashboard - Apiary Management System");
 
-            LOGGER.info("Showing client dashboard window...");
+            // CRITICAL: Store controller reference to prevent GC
+            clientStage.setUserData(controller);
+
+            // Set up cleanup on window close
+            clientStage.setOnCloseRequest(e -> {
+                LOGGER.info("Client window closing, cleaning up observers...");
+                controller.cleanup();
+            });
+
+            // Show window first
             clientStage.show();
 
-            // Close the login window
+            // THEN set client with proper delay like BeekeeperDashboard
+            Platform.runLater(() -> {
+                try {
+                    LOGGER.info("=== DELAYED CLIENT SETUP STARTING ===");
+                    Thread.sleep(500); // Match BeekeeperDashboard timing
+
+                    // Set client
+                    controller.setClient(client);
+
+                    // Force verification of observer registration
+                    Platform.runLater(() -> {
+                        try {
+                            Thread.sleep(1000); // Additional delay for verification
+                            controller.verifyAndForceObserverRegistration();
+                            ServiceFactory.logServiceInstances();
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Error in delayed verification", e);
+                        }
+                    });
+
+                    LOGGER.info("=== DELAYED CLIENT SETUP COMPLETED ===");
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error in delayed client setup", e);
+                }
+            });
+
+            // Close login window
             Stage loginStage = (Stage) loginButton.getScene().getWindow();
             loginStage.close();
 
-            LOGGER.info("=== CLIENT DASHBOARD OPENED SUCCESSFULLY ===");
-
-            // Log final observer count
-            Platform.runLater(() -> {
-                try {
-                    Thread.sleep(1000); // Give time for everything to settle
-                    ServiceFactory.logServiceInstances();
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Error in delayed service logging", e);
-                }
-            });
+            LOGGER.info("=== CLIENT DASHBOARD WINDOW OPENED ===");
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error opening client dashboard", e);
