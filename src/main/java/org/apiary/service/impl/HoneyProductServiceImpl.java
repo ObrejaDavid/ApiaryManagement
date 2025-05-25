@@ -258,6 +258,8 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
     @Override
     public boolean updateQuantityAfterPurchase(Integer productId, BigDecimal quantityToSubtract) {
         try {
+            LOGGER.info("Updating quantity for product " + productId + " - subtracting " + quantityToSubtract);
+
             Optional<HoneyProduct> productOpt = honeyProductRepository.findById(productId);
             if (productOpt.isEmpty()) {
                 LOGGER.warning("Honey product not found: " + productId);
@@ -265,17 +267,23 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
             }
 
             HoneyProduct product = productOpt.get();
+            LOGGER.info("Current stock: " + product.getQuantity());
 
             // Check if there is enough quantity
             if (product.getQuantity().compareTo(quantityToSubtract) < 0) {
-                LOGGER.warning("Not enough quantity available for honey product: " + productId);
+                LOGGER.warning("Not enough quantity available for honey product: " + productId +
+                        " (Available: " + product.getQuantity() + ", Requested: " + quantityToSubtract + ")");
                 return false;
             }
 
             // Update quantity
-            product.setQuantity(product.getQuantity().subtract(quantityToSubtract));
+            BigDecimal newQuantity = product.getQuantity().subtract(quantityToSubtract);
+            product.setQuantity(newQuantity);
             honeyProductRepository.save(product);
-            LOGGER.info("Updated quantity for honey product: " + productId);
+
+            LOGGER.info("Updated quantity for honey product " + productId +
+                    " from " + product.getQuantity().add(quantityToSubtract) +
+                    " to " + newQuantity);
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error updating quantity for honey product: " + productId, e);

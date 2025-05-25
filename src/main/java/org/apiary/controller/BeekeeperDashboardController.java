@@ -534,18 +534,24 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
     private void loadOrders() {
         try {
+            LOGGER.info("Loading orders for beekeeper: " + beekeeper.getUsername());
+
             // Get filter values
             String statusFilter = orderStatusFilterComboBox.getValue();
             LocalDate startDate = orderStartDatePicker.getValue();
             LocalDate endDate = orderEndDatePicker.getValue();
 
+            LOGGER.info("Order filters - Status: " + statusFilter + ", Start Date: " + startDate + ", End Date: " + endDate);
+
             // Apply filters
             List<Order> filteredOrders;
             if ("All".equals(statusFilter) && startDate == null && endDate == null) {
                 // No filters, load all orders for this beekeeper's products
+                LOGGER.info("Loading all orders for beekeeper (no filters)");
                 filteredOrders = orderService.findOrdersForBeekeeper(beekeeper);
             } else {
                 // Apply filters
+                LOGGER.info("Loading orders with filters for beekeeper");
                 filteredOrders = orderService.findOrdersWithFilters(
                         beekeeper,
                         "All".equals(statusFilter) ? null : statusFilter,
@@ -553,7 +559,18 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         endDate != null ? endDate.plusDays(1).atStartOfDay() : null);
             }
 
+            LOGGER.info("Setting " + filteredOrders.size() + " orders in table");
             orders.setAll(filteredOrders);
+
+            // Log each order for debugging
+            for (Order order : filteredOrders) {
+                LOGGER.info("Order in table: ID=" + order.getOrderId() +
+                        ", Status=" + order.getStatus() +
+                        ", Client=" + order.getClient().getUsername() +
+                        ", Date=" + order.getDate() +
+                        ", Total=" + order.getTotal());
+            }
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading orders", e);
             showAlert(Alert.AlertType.ERROR, "Error", "Failed to load orders: " + e.getMessage());

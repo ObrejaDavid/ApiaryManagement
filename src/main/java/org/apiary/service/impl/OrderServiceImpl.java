@@ -10,6 +10,7 @@ import org.apiary.service.interfaces.ShoppingCartService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -52,7 +53,7 @@ public class OrderServiceImpl implements OrderService {
                 return null;
             }
 
-            // Log each cart item
+            // Log each cart item and validate stock
             for (int i = 0; i < cartItems.size(); i++) {
                 CartItem item = cartItems.get(i);
                 LOGGER.info("Cart Item " + (i+1) + ": " + item.getProduct().getName() +
@@ -68,7 +69,7 @@ public class OrderServiceImpl implements OrderService {
                 }
 
                 HoneyProduct product = productOpt.get();
-                LOGGER.info("Product available quantity: " + product.getQuantity());
+                LOGGER.info("Product current stock: " + product.getQuantity());
 
                 if (product.getQuantity().compareTo(BigDecimal.valueOf(item.getQuantity())) < 0) {
                     LOGGER.severe("Insufficient stock for product: " + product.getName() +
@@ -89,7 +90,7 @@ public class OrderServiceImpl implements OrderService {
             }
             LOGGER.info("Client properly attached to order");
 
-            // Create order items - FIXED VERSION
+            // Create order items
             LOGGER.info("Creating order items...");
             for (CartItem cartItem : cartItems) {
                 try {
@@ -112,9 +113,6 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // Remove manual recalculateTotal() since addItem() already does this
-            // order.recalculateTotal(); // REMOVE THIS LINE
-
             // Save order
             LOGGER.info("Attempting to save order to database...");
             try {
@@ -131,10 +129,7 @@ public class OrderServiceImpl implements OrderService {
 
                 LOGGER.info("Order saved successfully with ID: " + savedOrder.getOrderId());
 
-                // Clear cart after successful order creation
-                shoppingCartService.clearCart(client);
-                LOGGER.info("Cart cleared successfully");
-
+                // Note: Cart will be cleared after successful payment processing
                 LOGGER.info("=== ORDER CREATION COMPLETED SUCCESSFULLY ===");
                 return savedOrder;
 
@@ -251,20 +246,36 @@ public class OrderServiceImpl implements OrderService {
                 return false;
             }
 
+            LOGGER.info("Processing payment for order: " + orderId);
+
             // Process payment
             boolean paymentSuccess = paymentService.processPayment(order);
 
             if (paymentSuccess) {
+                LOGGER.info("Payment successful, updating order status and product quantities");
+
                 // Update order status
                 order.setStatus("PAID");
                 orderRepository.save(order);
 
-                // Update product quantities
+                // Update product quantities - FIX: Use actual quantities, not monetary amounts
                 List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
                 for (OrderItem item : orderItems) {
-                    honeyProductService.updateQuantityAfterPurchase(
+                    // Convert quantity to BigDecimal for the service call
+                    BigDecimal quantityToSubtract = BigDecimal.valueOf(item.getQuantity());
+
+                    LOGGER.info("Updating stock for product " + item.getProduct().getProductId() +
+                            " - subtracting " + quantityToSubtract + " units");
+
+                    boolean stockUpdated = honeyProductService.updateQuantityAfterPurchase(
                             item.getProduct().getProductId(),
-                            item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));
+                            quantityToSubtract);
+
+                    if (!stockUpdated) {
+                        LOGGER.warning("Failed to update stock for product: " + item.getProduct().getProductId());
+                    } else {
+                        LOGGER.info("Successfully updated stock for product: " + item.getProduct().getProductId());
+                    }
                 }
 
                 LOGGER.info("Payment processed successfully for order: " + orderId);
@@ -372,16 +383,49 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<Order> findOrdersForBeekeeper(Beekeeper beekeeper) {
         try {
+            LOGGER.info("Finding orders for beekeeper: " + beekeeper.getUsername());
+
+            // Get all orders
             List<Order> allOrders = orderRepository.findAll();
-            return allOrders.stream()
-                    .filter(order -> {
-                        return order.getItems().stream()
-                                .anyMatch(item -> {
+            LOGGER.info("Found " + allOrders.size() + " total orders in system");
+
+            List<Order> beekeeperOrders = new ArrayList<>();
+
+            for (Order order : allOrders) {
+                try {
+                    // Use the service to get order items instead of accessing lazy collection
+                    List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
+                    LOGGER.info("Order " + order.getOrderId() + " has " + orderItems.size() + " items");
+
+                    // Check if any item belongs to this beekeeper
+                    boolean belongsToBeekeeper = orderItems.stream()
+                            .anyMatch(item -> {
+                                try {
                                     Apiary apiary = item.getProduct().getApiary();
-                                    return apiary.getBeekeeper().equals(beekeeper);
-                                });
-                    })
-                    .collect(Collectors.toList());
+                                    boolean matches = apiary.getBeekeeper().getUserId().equals(beekeeper.getUserId());
+                                    LOGGER.info("Order item product: " + item.getProduct().getName() +
+                                            ", Apiary: " + apiary.getName() +
+                                            ", Beekeeper: " + apiary.getBeekeeper().getUsername() +
+                                            ", Matches: " + matches);
+                                    return matches;
+                                } catch (Exception e) {
+                                    LOGGER.log(Level.WARNING, "Error checking order item for beekeeper match", e);
+                                    return false;
+                                }
+                            });
+
+                    if (belongsToBeekeeper) {
+                        beekeeperOrders.add(order);
+                        LOGGER.info("Order " + order.getOrderId() + " belongs to beekeeper " + beekeeper.getUsername());
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error processing order " + order.getOrderId() + " for beekeeper", e);
+                }
+            }
+
+            LOGGER.info("Found " + beekeeperOrders.size() + " orders for beekeeper: " + beekeeper.getUsername());
+            return beekeeperOrders;
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding orders for beekeeper: " + beekeeper.getUsername(), e);
             return List.of();
@@ -392,8 +436,10 @@ public class OrderServiceImpl implements OrderService {
     public List<Order> findOrdersWithFilters(Beekeeper beekeeper, String status, LocalDateTime startDate, LocalDateTime endDate) {
         try {
             List<Order> beekeeperOrders = findOrdersForBeekeeper(beekeeper);
+            LOGGER.info("Applying filters to " + beekeeperOrders.size() + " orders");
+            LOGGER.info("Filters - Status: " + status + ", Start Date: " + startDate + ", End Date: " + endDate);
 
-            return beekeeperOrders.stream()
+            List<Order> filteredOrders = beekeeperOrders.stream()
                     .filter(order -> {
                         if (status != null && !order.getStatus().equals(status)) {
                             return false;
@@ -407,6 +453,10 @@ public class OrderServiceImpl implements OrderService {
                         return true;
                     })
                     .collect(Collectors.toList());
+
+            LOGGER.info("After filtering: " + filteredOrders.size() + " orders remain");
+            return filteredOrders;
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding orders with filters for beekeeper: " + beekeeper.getUsername(), e);
             return List.of();

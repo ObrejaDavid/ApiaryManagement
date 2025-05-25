@@ -266,22 +266,20 @@ public class CheckoutController {
             if (order != null) {
                 LOGGER.info("Order created successfully with ID: " + order.getOrderId());
 
-                // Process payment
+                // Automatically process payment and update stock
                 boolean paymentSuccess = orderService.processPayment(order.getOrderId());
                 if (paymentSuccess) {
                     LOGGER.info("Payment processed successfully for order: " + order.getOrderId());
 
-                    // Clear cart after successful payment
-                    boolean cartCleared = shoppingCartService.clearCart(client);
-                    if (cartCleared) {
-                        LOGGER.info("Cart cleared successfully");
-                    } else {
-                        LOGGER.warning("Failed to clear cart after successful order");
-                    }
-
+                    // Show success message
                     orderNumberLabel.setText("Order #" + order.getOrderId());
                     confirmationTotalLabel.setText(order.getTotal() + " RON");
                     showStep(4);
+
+                    showAlert(Alert.AlertType.INFORMATION, "Order Successful",
+                            "Your order has been placed and paid successfully!\n" +
+                                    "Order #" + order.getOrderId() + "\n" +
+                                    "Stock quantities have been updated.");
                 } else {
                     LOGGER.warning("Payment failed for order: " + order.getOrderId());
                     showAlert(Alert.AlertType.ERROR, "Payment Failed",

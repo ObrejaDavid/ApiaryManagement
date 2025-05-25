@@ -19,17 +19,13 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.apiary.model.*;
 import org.apiary.service.ServiceFactory;
-import org.apiary.service.interfaces.ApiaryService;
-import org.apiary.service.interfaces.HoneyProductService;
-import org.apiary.service.interfaces.OrderService;
-import org.apiary.service.interfaces.ShoppingCartService;
+import org.apiary.service.interfaces.*;
 import org.apiary.utils.StringUtils;
 import org.apiary.utils.ValidationUtils;
 import org.apiary.utils.events.EntityChangeEvent;
 import org.apiary.utils.observer.Observer;
 import org.apiary.utils.pagination.Page;
 import org.apiary.utils.pagination.Pageable;
-import org.apiary.service.interfaces.UserService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -93,6 +89,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     private OrderService orderService;
     private ApiaryService apiaryService;
     private UserService userService;
+    private HiveService hiveService;
 
     // Pagination state
     private int currentPage = 0;
@@ -118,6 +115,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         orderService = ServiceFactory.getOrderService();
         apiaryService = ServiceFactory.getApiaryService();
         userService = ServiceFactory.getUserService();
+        hiveService = ServiceFactory.getHiveService();
 
         // Register as observer for cart and order changes
         honeyProductService.addObserver(this);
@@ -337,9 +335,18 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                 javafx.beans.binding.Bindings.createStringBinding(
                         () -> cellData.getValue().getLocation()));
 
-        apiaryHivesColumn.setCellValueFactory(cellData ->
-                javafx.beans.binding.Bindings.createObjectBinding(
-                        () -> cellData.getValue().getHives().size()));
+        // FIX: Use HiveService to count hives instead of accessing collection directly
+        apiaryHivesColumn.setCellValueFactory(cellData -> {
+            Apiary apiary = cellData.getValue();
+            return javafx.beans.binding.Bindings.createObjectBinding(() -> {
+                try {
+                    return (int) hiveService.countByApiary(apiary);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error counting hives for apiary: " + apiary.getApiaryId(), e);
+                    return 0;
+                }
+            });
+        });
 
         apiaryProductsColumn.setCellValueFactory(cellData -> {
             Apiary apiary = cellData.getValue();
@@ -348,6 +355,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                     long productCount = honeyProductService.countProductsByApiary(apiary.getApiaryId());
                     return productCount + " product" + (productCount != 1 ? "s" : "");
                 } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error counting products for apiary: " + apiary.getApiaryId(), e);
                     return "N/A";
                 }
             });
@@ -759,7 +767,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             content.getChildren().add(infoGrid);
             content.getChildren().add(new Separator());
 
-            // Order items
+            // Order items - USE SERVICE TO LOAD ITEMS PROPERLY
             content.getChildren().add(new Label("Items:"));
 
             TableView<OrderItem> itemsTable = new TableView<>();
@@ -787,7 +795,10 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                             () -> data.getValue().getSubtotal()));
 
             itemsTable.getColumns().addAll(itemNameCol, itemPriceCol, itemQuantityCol, itemTotalCol);
-            itemsTable.getItems().addAll(order.getItems());
+
+            // FIX: Load order items using service instead of accessing collection directly
+            List<OrderItem> orderItems = orderService.getOrderItems(order.getOrderId());
+            itemsTable.getItems().addAll(orderItems);
 
             content.getChildren().add(itemsTable);
 
