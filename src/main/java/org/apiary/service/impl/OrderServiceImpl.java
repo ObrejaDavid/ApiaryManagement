@@ -3,6 +3,7 @@ package org.apiary.service.impl;
 import org.apiary.model.*;
 import org.apiary.repository.interfaces.OrderItemRepository;
 import org.apiary.repository.interfaces.OrderRepository;
+import org.apiary.repository.interfaces.HoneyProductRepository;
 import org.apiary.service.interfaces.HoneyProductService;
 import org.apiary.service.interfaces.OrderService;
 import org.apiary.service.interfaces.PaymentService;
@@ -25,23 +26,26 @@ public class OrderServiceImpl implements OrderService {
     private final ShoppingCartService shoppingCartService;
     private final PaymentService paymentService;
     private final HoneyProductService honeyProductService;
+    private final HoneyProductRepository honeyProductRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             OrderItemRepository orderItemRepository,
                             ShoppingCartService shoppingCartService,
                             PaymentService paymentService,
-                            HoneyProductService honeyProductService) {
+                            HoneyProductService honeyProductService,
+                            HoneyProductRepository honeyProductRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.shoppingCartService = shoppingCartService;
         this.paymentService = paymentService;
         this.honeyProductService = honeyProductService;
+        this.honeyProductRepository = honeyProductRepository;
     }
 
     @Override
     public Order createOrderFromCart(Client client) {
         try {
-            LOGGER.info("=== STARTING ORDER CREATION DEBUG ===");
+            LOGGER.info("=== STARTING ORDER CREATION WITH DIRECT PAYMENT ===");
             LOGGER.info("Client: " + client.getUsername() + " (ID: " + client.getUserId() + ")");
 
             // Get cart items with detailed logging
@@ -78,10 +82,11 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // Create order
-            LOGGER.info("Creating new order object...");
+            // Create order with PAID status directly
+            LOGGER.info("Creating new order object with PAID status...");
             Order order = new Order(client);
-            LOGGER.info("Order object created successfully");
+            order.setStatus("PAID"); // Set directly to PAID instead of PENDING
+            LOGGER.info("Order object created with PAID status");
 
             // Verify client is properly attached
             if (order.getClient() == null || order.getClient().getUserId() == null) {
@@ -113,7 +118,7 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // Save order
+            // Save order first
             LOGGER.info("Attempting to save order to database...");
             try {
                 Order savedOrder = orderRepository.save(order);
@@ -129,9 +134,61 @@ public class OrderServiceImpl implements OrderService {
 
                 LOGGER.info("Order saved successfully with ID: " + savedOrder.getOrderId());
 
-                // Note: Cart will be cleared after successful payment processing
-                LOGGER.info("=== ORDER CREATION COMPLETED SUCCESSFULLY ===");
-                return savedOrder;
+                // Process payment automatically (simulate payment processing)
+                LOGGER.info("Processing payment automatically for order: " + savedOrder.getOrderId());
+                boolean paymentSuccess = paymentService.processPayment(savedOrder);
+
+                if (paymentSuccess) {
+                    LOGGER.info("Payment successful, updating product quantities");
+
+                    // Update product quantities immediately
+                    List<OrderItem> orderItems = orderItemRepository.findByOrder(savedOrder);
+                    boolean allStockUpdated = true;
+
+                    for (OrderItem item : orderItems) {
+                        BigDecimal quantityToSubtract = BigDecimal.valueOf(item.getQuantity());
+
+                        LOGGER.info("Updating stock for product " + item.getProduct().getProductId() +
+                                " - subtracting " + quantityToSubtract + " units");
+
+                        boolean stockUpdated = honeyProductService.updateQuantityAfterPurchase(
+                                item.getProduct().getProductId(),
+                                quantityToSubtract);
+
+                        if (!stockUpdated) {
+                            LOGGER.severe("Failed to update stock for product: " + item.getProduct().getProductId());
+                            allStockUpdated = false;
+                            break;
+                        } else {
+                            LOGGER.info("Successfully updated stock for product: " + item.getProduct().getProductId());
+                        }
+                    }
+
+                    if (!allStockUpdated) {
+                        LOGGER.severe("Stock update failed, canceling order");
+                        // Revert order status or handle failure
+                        savedOrder.setStatus("CANCELED");
+                        orderRepository.save(savedOrder);
+                        return null;
+                    }
+
+                    // Clear cart only after successful payment and stock update
+                    LOGGER.info("Clearing shopping cart for client: " + client.getUsername());
+                    boolean cartCleared = shoppingCartService.clearCart(client);
+                    if (!cartCleared) {
+                        LOGGER.warning("Failed to clear cart for client: " + client.getUsername());
+                    }
+
+                    LOGGER.info("=== ORDER CREATION WITH PAYMENT COMPLETED SUCCESSFULLY ===");
+                    return savedOrder;
+
+                } else {
+                    LOGGER.severe("Payment failed for order: " + savedOrder.getOrderId());
+                    // Mark order as failed
+                    savedOrder.setStatus("CANCELED");
+                    orderRepository.save(savedOrder);
+                    return null;
+                }
 
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Database error while saving order", e);
@@ -337,20 +394,116 @@ public class OrderServiceImpl implements OrderService {
                 return false;
             }
 
-            // Check if order can be canceled
-            if (!"PENDING".equals(order.getStatus())) {
+            // Check if order can be canceled (only PENDING and PAID orders can be canceled)
+            if (!"PENDING".equals(order.getStatus()) && !"PAID".equals(order.getStatus())) {
                 LOGGER.warning("Cannot cancel order with status: " + order.getStatus() +
                         " for order: " + orderId);
                 return false;
             }
 
+            // In the cancelOrder method, replace the problematic section with:
+            if ("PAID".equals(order.getStatus())) {
+                LOGGER.info("Restoring stock quantities for canceled order: " + orderId);
+
+                List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
+                for (OrderItem item : orderItems) {
+                    try {
+                        // Get current product to add back the quantity
+                        Optional<HoneyProduct> productOpt = honeyProductRepository.findById(item.getProduct().getProductId());
+                        if (productOpt.isPresent()) {
+                            HoneyProduct product = productOpt.get();
+                            BigDecimal currentQuantity = product.getQuantity();
+                            BigDecimal restoredQuantity = currentQuantity.add(BigDecimal.valueOf(item.getQuantity()));
+
+                            // Update quantity directly
+                            product.setQuantity(restoredQuantity);
+                            HoneyProduct savedProduct = honeyProductRepository.save(product);
+
+                            if (savedProduct != null) {
+                                LOGGER.info("Restored " + item.getQuantity() + " units to product: " +
+                                        product.getName() + " (new quantity: " + restoredQuantity + ")");
+                            } else {
+                                LOGGER.warning("Failed to restore stock for product: " + product.getName());
+                            }
+                        } else {
+                            LOGGER.warning("Product not found when restoring stock: " + item.getProduct().getProductId());
+                        }
+                    } catch (Exception e) {
+                        LOGGER.log(Level.WARNING, "Error restoring stock for product: " +
+                                item.getProduct().getProductId(), e);
+                    }
+                }
+            }
+
+            // Update order status to canceled
             order.setStatus("CANCELED");
             orderRepository.save(order);
 
-            LOGGER.info("Canceled order: " + orderId);
+            LOGGER.info("Canceled order: " + orderId +
+                    ("PAID".equals(order.getStatus()) ? " and restored stock quantities" : ""));
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error canceling order: " + orderId, e);
+            return false;
+        }
+    }
+
+    /**
+     * Restore stock quantities for a canceled order
+     * @param order The order to restore stock for
+     * @return true if stock was restored successfully, false otherwise
+     */
+    private boolean restoreStockForOrder(Order order) {
+        try {
+            LOGGER.info("Restoring stock for order: " + order.getOrderId());
+
+            List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
+            boolean allRestored = true;
+
+            for (OrderItem item : orderItems) {
+                try {
+                    Optional<HoneyProduct> productOpt = honeyProductService.findById(item.getProduct().getProductId());
+                    if (productOpt.isPresent()) {
+                        HoneyProduct product = productOpt.get();
+
+                        // Get the actual beekeeper who owns this product
+                        Beekeeper productOwner = product.getApiary().getBeekeeper();
+
+                        BigDecimal currentQuantity = product.getQuantity();
+                        BigDecimal quantityToRestore = BigDecimal.valueOf(item.getQuantity());
+                        BigDecimal newQuantity = currentQuantity.add(quantityToRestore);
+
+                        // Update product quantity using the correct beekeeper
+                        HoneyProduct updatedProduct = honeyProductService.updateHoneyProduct(
+                                product.getProductId(),
+                                product.getName(),
+                                product.getDescription(),
+                                product.getPrice(),
+                                newQuantity,
+                                productOwner  // Use the actual product owner
+                        );
+
+                        if (updatedProduct != null) {
+                            LOGGER.info("Restored " + quantityToRestore + " units to product: " +
+                                    product.getName() + " (new total: " + newQuantity + ")");
+                        } else {
+                            LOGGER.warning("Failed to restore stock for product: " + product.getName());
+                            allRestored = false;
+                        }
+                    } else {
+                        LOGGER.warning("Product not found when restoring stock: " + item.getProduct().getProductId());
+                        allRestored = false;
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error restoring stock for item in order " +
+                            order.getOrderId(), e);
+                    allRestored = false;
+                }
+            }
+
+            return allRestored;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error restoring stock for order: " + order.getOrderId(), e);
             return false;
         }
     }

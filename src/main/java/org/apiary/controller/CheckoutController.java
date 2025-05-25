@@ -259,18 +259,15 @@ public class CheckoutController {
                 return;
             }
 
-            LOGGER.info("Cart verification successful, proceeding with order creation");
+            LOGGER.info("Cart verification successful, proceeding with order creation and payment");
 
-            // Create order from cart
+            // Create order from cart - this will now automatically handle payment and set PAID status
             var order = orderService.createOrderFromCart(client);
             if (order != null) {
-                LOGGER.info("Order created successfully with ID: " + order.getOrderId());
+                LOGGER.info("Order created and paid successfully with ID: " + order.getOrderId());
 
-                // Automatically process payment and update stock
-                boolean paymentSuccess = orderService.processPayment(order.getOrderId());
-                if (paymentSuccess) {
-                    LOGGER.info("Payment processed successfully for order: " + order.getOrderId());
-
+                // Verify the order status is PAID
+                if ("PAID".equals(order.getStatus())) {
                     // Show success message
                     orderNumberLabel.setText("Order #" + order.getOrderId());
                     confirmationTotalLabel.setText(order.getTotal() + " RON");
@@ -279,21 +276,20 @@ public class CheckoutController {
                     showAlert(Alert.AlertType.INFORMATION, "Order Successful",
                             "Your order has been placed and paid successfully!\n" +
                                     "Order #" + order.getOrderId() + "\n" +
-                                    "Stock quantities have been updated.");
+                                    "Stock quantities have been updated automatically.");
                 } else {
-                    LOGGER.warning("Payment failed for order: " + order.getOrderId());
-                    showAlert(Alert.AlertType.ERROR, "Payment Failed",
-                            "Payment could not be processed. Please check your payment information and try again.");
+                    LOGGER.warning("Order was created but status is not PAID: " + order.getStatus());
+                    showAlert(Alert.AlertType.ERROR, "Order Status Error",
+                            "Order was created but payment processing failed. Status: " + order.getStatus());
                 }
             } else {
                 LOGGER.severe("Order creation returned null for client: " + client.getUsername());
                 showAlert(Alert.AlertType.ERROR, "Order Failed",
-                        "Could not create order. Please check the application logs for detailed error information. " +
-                                "Common causes:\n" +
-                                "• Database connectivity issues\n" +
-                                "• Insufficient product stock\n" +
-                                "• Invalid cart items\n\n" +
-                                "Please try refreshing the page and trying again.");
+                        "Could not create and process order. Please check:\n" +
+                                "• Product availability\n" +
+                                "• Database connectivity\n" +
+                                "• Payment processing\n\n" +
+                                "Please try again or contact support if the problem persists.");
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error placing order for client: " + client.getUsername(), e);

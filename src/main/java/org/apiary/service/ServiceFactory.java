@@ -38,7 +38,8 @@ public class ServiceFactory {
             RepositoryFactory.getOrderItemRepository(),
             shoppingCartService,
             paymentService,
-            honeyProductService);
+            honeyProductService,
+            RepositoryFactory.getHoneyProductRepository());
 
     private ServiceFactory() {
         // Private constructor to prevent instantiation
