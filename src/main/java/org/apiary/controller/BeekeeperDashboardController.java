@@ -1190,6 +1190,9 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         }
     }
 
+    // File: src/main/java/org/apiary/controller/BeekeeperDashboardController.java
+// Replace the handleViewOrderDetails method
+
     private void handleViewOrderDetails(Order order) {
         try {
             // Create a dialog to show order details
@@ -1304,13 +1307,21 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 Button markDeliveredButton = new Button("Mark as Delivered");
                 markDeliveredButton.getStyleClass().add("primary-button");
                 markDeliveredButton.setOnAction(e -> {
+                    LOGGER.info("Beekeeper " + beekeeper.getUsername() +
+                            " marking order " + order.getOrderId() + " as DELIVERED");
+
+                    // Use the service which will automatically notify observers
                     boolean updated = orderService.updateOrderStatus(order.getOrderId(), "DELIVERED");
+
                     if (updated) {
+                        LOGGER.info("Order status updated successfully, observers should be notified");
+
                         showAlert(Alert.AlertType.INFORMATION, "Status Updated",
-                                "Order marked as delivered successfully.");
+                                "Order marked as delivered successfully. The customer has been notified.");
                         dialog.close();
-                        loadOrders(); // Refresh the orders table
+                        loadOrders(); // Refresh the orders table locally
                     } else {
+                        LOGGER.warning("Failed to update order status to DELIVERED");
                         showAlert(Alert.AlertType.ERROR, "Error",
                                 "Failed to update order status.");
                     }

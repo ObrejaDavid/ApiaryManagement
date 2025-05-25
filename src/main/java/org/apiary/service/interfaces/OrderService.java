@@ -1,15 +1,20 @@
+// File: src/main/java/org/apiary/service/interfaces/OrderService.java
+// Replace the interface declaration line
+
 package org.apiary.service.interfaces;
 
 import org.apiary.model.Beekeeper;
 import org.apiary.model.Client;
 import org.apiary.model.Order;
 import org.apiary.model.OrderItem;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.Observable;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface OrderService {
+public interface OrderService extends Observable<EntityChangeEvent<?>> {
     /**
      * Create a new order from a client's shopping cart
      * @param client The client

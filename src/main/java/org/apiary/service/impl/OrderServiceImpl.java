@@ -8,6 +8,8 @@ import org.apiary.service.interfaces.HoneyProductService;
 import org.apiary.service.interfaces.OrderService;
 import org.apiary.service.interfaces.PaymentService;
 import org.apiary.service.interfaces.ShoppingCartService;
+import org.apiary.utils.events.EntityChangeEvent;
+import org.apiary.utils.observer.EventManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,7 +20,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class OrderServiceImpl implements OrderService {
+public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> implements OrderService {
 
     private static final Logger LOGGER = Logger.getLogger(OrderServiceImpl.class.getName());
     private final OrderRepository orderRepository;
@@ -169,6 +171,10 @@ public class OrderServiceImpl implements OrderService {
                         // Revert order status or handle failure
                         savedOrder.setStatus("CANCELED");
                         orderRepository.save(savedOrder);
+
+                        // Notify observers about the canceled order
+                        notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, savedOrder));
+
                         return null;
                     }
 
@@ -179,6 +185,9 @@ public class OrderServiceImpl implements OrderService {
                         LOGGER.warning("Failed to clear cart for client: " + client.getUsername());
                     }
 
+                    // Notify observers about the new order
+                    notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedOrder));
+
                     LOGGER.info("=== ORDER CREATION WITH PAYMENT COMPLETED SUCCESSFULLY ===");
                     return savedOrder;
 
@@ -187,6 +196,10 @@ public class OrderServiceImpl implements OrderService {
                     // Mark order as failed
                     savedOrder.setStatus("CANCELED");
                     orderRepository.save(savedOrder);
+
+                    // Notify observers about the failed order
+                    notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, savedOrder));
+
                     return null;
                 }
 
@@ -280,6 +293,8 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
+
     @Override
     public boolean processPayment(Integer orderId) {
         try {
@@ -290,6 +305,11 @@ public class OrderServiceImpl implements OrderService {
             }
 
             Order order = orderOpt.get();
+            Order oldOrder = new Order(order.getClient());
+            oldOrder.setOrderId(order.getOrderId());
+            oldOrder.setDate(order.getDate());
+            oldOrder.setTotal(order.getTotal());
+            oldOrder.setStatus(order.getStatus());
 
             // Check if order is already paid
             if ("PAID".equals(order.getStatus())) {
@@ -313,29 +333,37 @@ public class OrderServiceImpl implements OrderService {
 
                 // Update order status
                 order.setStatus("PAID");
-                orderRepository.save(order);
+                Order updatedOrder = orderRepository.save(order);
 
-                // Update product quantities - FIX: Use actual quantities, not monetary amounts
-                List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
-                for (OrderItem item : orderItems) {
-                    // Convert quantity to BigDecimal for the service call
-                    BigDecimal quantityToSubtract = BigDecimal.valueOf(item.getQuantity());
+                if (updatedOrder != null) {
+                    // Update product quantities
+                    List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
+                    for (OrderItem item : orderItems) {
+                        // Convert quantity to BigDecimal for the service call
+                        BigDecimal quantityToSubtract = BigDecimal.valueOf(item.getQuantity());
 
-                    LOGGER.info("Updating stock for product " + item.getProduct().getProductId() +
-                            " - subtracting " + quantityToSubtract + " units");
+                        LOGGER.info("Updating stock for product " + item.getProduct().getProductId() +
+                                " - subtracting " + quantityToSubtract + " units");
 
-                    boolean stockUpdated = honeyProductService.updateQuantityAfterPurchase(
-                            item.getProduct().getProductId(),
-                            quantityToSubtract);
+                        boolean stockUpdated = honeyProductService.updateQuantityAfterPurchase(
+                                item.getProduct().getProductId(),
+                                quantityToSubtract);
 
-                    if (!stockUpdated) {
-                        LOGGER.warning("Failed to update stock for product: " + item.getProduct().getProductId());
-                    } else {
-                        LOGGER.info("Successfully updated stock for product: " + item.getProduct().getProductId());
+                        if (!stockUpdated) {
+                            LOGGER.warning("Failed to update stock for product: " + item.getProduct().getProductId());
+                        } else {
+                            LOGGER.info("Successfully updated stock for product: " + item.getProduct().getProductId());
+                        }
                     }
-                }
 
-                LOGGER.info("Payment processed successfully for order: " + orderId);
+                    // Notify observers about the payment success
+                    notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedOrder, oldOrder));
+
+                    LOGGER.info("Payment processed successfully for order: " + orderId + " and notified observers");
+                } else {
+                    LOGGER.warning("Failed to save paid order: " + orderId);
+                    return false;
+                }
             } else {
                 LOGGER.warning("Payment failed for order: " + orderId);
             }
@@ -357,6 +385,11 @@ public class OrderServiceImpl implements OrderService {
             }
 
             Order order = orderOpt.get();
+            Order oldOrder = new Order(order.getClient());
+            oldOrder.setOrderId(order.getOrderId());
+            oldOrder.setDate(order.getDate());
+            oldOrder.setTotal(order.getTotal());
+            oldOrder.setStatus(order.getStatus());
 
             // Validate status transition
             if (!isValidStatusTransition(order.getStatus(), status)) {
@@ -366,10 +399,18 @@ public class OrderServiceImpl implements OrderService {
             }
 
             order.setStatus(status);
-            orderRepository.save(order);
+            Order updatedOrder = orderRepository.save(order);
 
-            LOGGER.info("Updated status to " + status + " for order: " + orderId);
-            return true;
+            if (updatedOrder != null) {
+                // Notify observers about the status change
+                notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedOrder, oldOrder));
+
+                LOGGER.info("Updated status to " + status + " for order: " + orderId + " and notified observers");
+                return true;
+            } else {
+                LOGGER.warning("Failed to save order status update for order: " + orderId);
+                return false;
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error updating status for order: " + orderId, e);
             return false;
@@ -386,6 +427,11 @@ public class OrderServiceImpl implements OrderService {
             }
 
             Order order = orderOpt.get();
+            Order oldOrder = new Order(order.getClient());
+            oldOrder.setOrderId(order.getOrderId());
+            oldOrder.setDate(order.getDate());
+            oldOrder.setTotal(order.getTotal());
+            oldOrder.setStatus(order.getStatus());
 
             // Check if order belongs to client
             if (!order.getClient().equals(client)) {
@@ -401,7 +447,7 @@ public class OrderServiceImpl implements OrderService {
                 return false;
             }
 
-            // In the cancelOrder method, replace the problematic section with:
+            // Restore stock if order was paid
             if ("PAID".equals(order.getStatus())) {
                 LOGGER.info("Restoring stock quantities for canceled order: " + orderId);
 
@@ -437,11 +483,19 @@ public class OrderServiceImpl implements OrderService {
 
             // Update order status to canceled
             order.setStatus("CANCELED");
-            orderRepository.save(order);
+            Order updatedOrder = orderRepository.save(order);
 
-            LOGGER.info("Canceled order: " + orderId +
-                    ("PAID".equals(order.getStatus()) ? " and restored stock quantities" : ""));
-            return true;
+            if (updatedOrder != null) {
+                // Notify observers about the cancellation
+                notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedOrder, oldOrder));
+
+                LOGGER.info("Canceled order: " + orderId + " and notified observers" +
+                        ("PAID".equals(oldOrder.getStatus()) ? " (restored stock quantities)" : ""));
+                return true;
+            } else {
+                LOGGER.warning("Failed to save order cancellation for order: " + orderId);
+                return false;
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error canceling order: " + orderId, e);
             return false;
@@ -523,7 +577,7 @@ public class OrderServiceImpl implements OrderService {
             case "PENDING":
                 return "PAID".equals(newStatus) || "CANCELED".equals(newStatus);
             case "PAID":
-                return "DELIVERED".equals(newStatus);
+                return "DELIVERED".equals(newStatus) || "CANCELED".equals(newStatus);
             case "CANCELED":
                 return false; // Cannot transition from canceled
             case "DELIVERED":

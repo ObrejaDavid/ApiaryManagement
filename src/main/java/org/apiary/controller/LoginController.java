@@ -138,6 +138,9 @@ public class LoginController {
         }
     }
 
+    // File: src/main/java/org/apiary/controller/LoginController.java
+// Function: handleSignup() method (replace the existing method)
+
     private void handleSignup() {
         // Get form data
         String username = signupUsername.getText().trim();
@@ -204,23 +207,44 @@ public class LoginController {
 
         try {
             // Register user based on account type
+            User registeredUser = null;
+
             if (isBeekeeper) {
                 Beekeeper beekeeper = userService.registerBeekeeper(username, password, phone, address, yearsExperience);
+                registeredUser = beekeeper;
 
                 if (beekeeper != null) {
                     showAlert(Alert.AlertType.INFORMATION, "Registration Successful",
-                            "Beekeeper account created successfully! You can now log in.");
-                    toggleForms(); // Switch back to login form
+                            "Beekeeper account created successfully! Logging you in...");
+
+                    if (userService.authenticate(username, password)) {
+                        openBeekeeperDashboard(beekeeper);
+                    } else {
+                        LOGGER.log(Level.WARNING, "Auto-login failed after successful registration for beekeeper: " + username);
+                        toggleForms(); // Fall back to manual login
+                    }
                 }
             } else {
                 Client client = userService.registerClient(username, password, fullName, email, address, phone);
+                registeredUser = client;
 
                 if (client != null) {
                     showAlert(Alert.AlertType.INFORMATION, "Registration Successful",
-                            "Client account created successfully! You can now log in.");
-                    toggleForms(); // Switch back to login form
+                            "Client account created successfully! Logging you in...");
+
+                    if (userService.authenticate(username, password)) {
+                        openClientDashboard(client);
+                    } else {
+                        LOGGER.log(Level.WARNING, "Auto-login failed after successful registration for client: " + username);
+                        toggleForms(); // Fall back to manual login
+                    }
                 }
             }
+
+            if (registeredUser == null) {
+                showAlert(Alert.AlertType.ERROR, "Registration Error", "Failed to create account. Please try again.");
+            }
+
         } catch (IllegalArgumentException e) {
             // Validation errors from service
             showAlert(Alert.AlertType.ERROR, "Registration Error", e.getMessage());

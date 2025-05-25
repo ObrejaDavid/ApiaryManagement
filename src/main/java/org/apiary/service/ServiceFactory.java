@@ -1,3 +1,6 @@
+// File: src/main/java/org/apiary/service/ServiceFactory.java
+// Replace the entire content
+
 package org.apiary.service;
 
 import org.apiary.repository.RepositoryFactory;
@@ -33,6 +36,7 @@ public class ServiceFactory {
     private static final PaymentService paymentService = new PaymentServiceImpl(
             RepositoryFactory.getPaymentRepository());
 
+    // OrderService now extends EventManager and implements Observable
     private static final OrderService orderService = new OrderServiceImpl(
             RepositoryFactory.getOrderRepository(),
             RepositoryFactory.getOrderItemRepository(),

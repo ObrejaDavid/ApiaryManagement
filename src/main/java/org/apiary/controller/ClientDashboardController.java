@@ -1,5 +1,7 @@
 package org.apiary.controller;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -17,6 +19,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.apiary.model.*;
 import org.apiary.service.ServiceFactory;
 import org.apiary.service.interfaces.*;
@@ -117,8 +120,13 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         userService = ServiceFactory.getUserService();
         hiveService = ServiceFactory.getHiveService();
 
-        // Register as observer for cart and order changes
+        // Register as observer for ALL relevant services for real-time updates
         honeyProductService.addObserver(this);
+        orderService.addObserver(this);  // NEW: Register for order updates
+        apiaryService.addObserver(this); // NEW: Register for apiary updates
+        hiveService.addObserver(this);   // NEW: Register for hive updates
+
+        LOGGER.info("ClientDashboardController registered as observer for all services");
 
         // Set up filter options
         setupFilterOptions();
@@ -192,6 +200,99 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                 }
             }
         });
+    }
+
+    @Override
+    public void update(EntityChangeEvent<?> event) {
+        if (Platform.isFxApplicationThread()) {
+            handleEntityChangeUpdate(event);
+        } else {
+            Platform.runLater(() -> handleEntityChangeUpdate(event));
+        }
+    }
+
+    private void handleEntityChangeUpdate(EntityChangeEvent<?> event) {
+        try {
+            LOGGER.info("ClientDashboard received entity change event: " +
+                    event.getType() + " for " + event.getEntityType());
+
+            switch (event.getEntityType()) {
+                case "HoneyProduct":
+                    LOGGER.info("Refreshing products due to honey product change");
+                    loadProducts();
+                    break;
+
+                case "Order":
+                    LOGGER.info("Refreshing orders due to order change");
+                    loadOrders();
+
+                    // Also refresh cart if it's an order creation (cart might be cleared)
+                    if (event.getType() == EntityChangeEvent.Type.CREATED) {
+                        LOGGER.info("New order created, refreshing cart as well");
+                        loadCartItems();
+                    }
+                    break;
+
+                case "Apiary":
+                    LOGGER.info("Refreshing apiaries due to apiary change");
+                    loadApiaries();
+                    // Also refresh products as apiary changes might affect products
+                    loadProducts();
+                    break;
+
+                case "Hive":
+                    LOGGER.info("Refreshing data due to hive change");
+                    // Hive changes might affect apiaries view and products
+                    loadApiaries();
+                    loadProducts();
+                    break;
+
+                case "CartItem":
+                    LOGGER.info("Refreshing cart due to cart item change");
+                    loadCartItems();
+                    break;
+
+                default:
+                    LOGGER.info("Unknown entity type for update: " + event.getEntityType());
+                    break;
+            }
+
+            // Special handling for order status changes
+            if ("Order".equals(event.getEntityType()) && event.getType() == EntityChangeEvent.Type.UPDATED) {
+                Order updatedOrder = (Order) event.getEntity();
+                Order oldOrder = (Order) event.getOldEntity();
+
+                if (oldOrder != null && !oldOrder.getStatus().equals(updatedOrder.getStatus())) {
+                    LOGGER.info("Order status changed from " + oldOrder.getStatus() +
+                            " to " + updatedOrder.getStatus() + " for order #" + updatedOrder.getOrderId());
+
+                    // Show notification to user if it's their order
+                    if (client != null && updatedOrder.getClient().getUserId().equals(client.getUserId())) {
+                        Platform.runLater(() -> {
+                            String message = String.format("Order #%d status updated to: %s",
+                                    updatedOrder.getOrderId(),
+                                    updatedOrder.getStatus());
+
+                            Alert notification = new Alert(Alert.AlertType.INFORMATION);
+                            notification.setTitle("Order Status Update");
+                            notification.setHeaderText("Your Order Has Been Updated");
+                            notification.setContentText(message);
+                            notification.show();
+
+                            // Auto-close the notification after 5 seconds
+                            Timeline timeline = new Timeline(new KeyFrame(
+                                    Duration.seconds(5),
+                                    e -> notification.close()
+                            ));
+                            timeline.play();
+                        });
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error handling entity change update", e);
+        }
     }
 
     public void setClient(Client client) {
@@ -1037,21 +1138,6 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         }
     }
 
-    @Override
-    public void update(EntityChangeEvent<?> event) {
-        // This method is called when an entity changes
-        // (product, cart item, order, etc.)
-        if (event.getEntity() instanceof HoneyProduct) {
-            // Refresh products on change
-            Platform.runLater(this::loadProducts);
-        } else if (event.getEntity() instanceof CartItem) {
-            // Refresh cart on change
-            Platform.runLater(this::loadCartItems);
-        } else if (event.getEntity() instanceof Order) {
-            // Refresh orders on change
-            Platform.runLater(this::loadOrders);
-        }
-    }
 
     private void showAlert(Alert.AlertType alertType, String title, String message) {
         Alert alert = new Alert(alertType);
