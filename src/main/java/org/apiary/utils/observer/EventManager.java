@@ -20,10 +20,29 @@ public class EventManager<E extends Event> implements Observable<E> {
 
     @Override
     public void addObserver(Observer<E> observer) {
-        if (observer != null && !observers.contains(observer)) {
-            observers.add(observer);
-            LOGGER.info("Added observer: " + observer.getClass().getSimpleName() +
-                    ". Total observers: " + observers.size());
+        if (observer != null) {
+            // Log the registration attempt
+            LOGGER.info("=== ATTEMPTING TO ADD OBSERVER ===");
+            LOGGER.info("Observer: " + observer.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(observer.hashCode()));
+            LOGGER.info("Current observer count BEFORE adding: " + observers.size());
+
+            // Check if already exists
+            boolean alreadyExists = observers.contains(observer);
+            LOGGER.info("Observer already exists: " + alreadyExists);
+
+            if (!alreadyExists) {
+                observers.add(observer);
+                LOGGER.info("Successfully added observer. New count: " + observers.size());
+            } else {
+                LOGGER.warning("Observer already exists, not adding duplicate");
+            }
+
+            // Log all current observers
+            logObserverDetails();
+            LOGGER.info("=== ADD OBSERVER COMPLETED ===");
+        } else {
+            LOGGER.warning("Attempted to add null observer");
         }
     }
 

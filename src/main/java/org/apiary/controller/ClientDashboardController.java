@@ -143,117 +143,157 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
 
     @FXML
     private void initialize() {
-        // Initialize services
-        honeyProductService = ServiceFactory.getHoneyProductService();
-        shoppingCartService = ServiceFactory.getShoppingCartService();
-        orderService = ServiceFactory.getOrderService();
-        apiaryService = ServiceFactory.getApiaryService();
-        userService = ServiceFactory.getUserService();
-        hiveService = ServiceFactory.getHiveService();
-
-        // Register as observer for ALL relevant services for real-time updates
-        LOGGER.info("=== REGISTERING CLIENT DASHBOARD AS OBSERVER ===");
-
         try {
-            honeyProductService.addObserver(this);
-            LOGGER.info("Registered as observer for HoneyProductService");
+            LOGGER.info("=== CLIENT DASHBOARD INITIALIZE STARTED ===");
+            LOGGER.info("ClientDashboardController instance: " + this.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(this.hashCode()));
 
-            orderService.addObserver(this);
-            LOGGER.info("Registered as observer for OrderService");
+            // Initialize services
+            LOGGER.info("Getting services from ServiceFactory...");
+            honeyProductService = ServiceFactory.getHoneyProductService();
+            shoppingCartService = ServiceFactory.getShoppingCartService();
+            orderService = ServiceFactory.getOrderService();
+            apiaryService = ServiceFactory.getApiaryService();
+            userService = ServiceFactory.getUserService();
+            hiveService = ServiceFactory.getHiveService();
 
-            apiaryService.addObserver(this);
-            LOGGER.info("Registered as observer for ApiaryService");
-
-            hiveService.addObserver(this);
-            LOGGER.info("Registered as observer for HiveService");
-
-            LOGGER.info("ClientDashboardController registered as observer for all services");
-
-            // Log service instances for debugging
+            LOGGER.info("Services obtained successfully");
             LOGGER.info("HoneyProductService instance: " + honeyProductService.getClass().getSimpleName() + "@" +
                     Integer.toHexString(honeyProductService.hashCode()));
 
+            // Register as observer for ALL relevant services for real-time updates
+            LOGGER.info("=== REGISTERING CLIENT DASHBOARD AS OBSERVER ===");
+
+            // Check observer count BEFORE registration
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                LOGGER.info("BEFORE CLIENT registration - HoneyProductService has " + eventManager.countObservers() + " observers");
+                eventManager.logObserverDetails();
+            }
+
+            // Register for HoneyProductService
+            LOGGER.info("About to register ClientDashboard for HoneyProductService...");
+            honeyProductService.addObserver(this);
+            LOGGER.info("ClientDashboard registration for HoneyProductService completed");
+
+            // Check observer count AFTER registration
+            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
+                org.apiary.utils.observer.EventManager<?> eventManager =
+                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
+                LOGGER.info("AFTER CLIENT registration - HoneyProductService has " + eventManager.countObservers() + " observers");
+                eventManager.logObserverDetails();
+            }
+
+            // Register for other services
+            LOGGER.info("Registering for OrderService...");
+            orderService.addObserver(this);
+            LOGGER.info("OrderService registration completed");
+
+            LOGGER.info("Registering for ApiaryService...");
+            apiaryService.addObserver(this);
+            LOGGER.info("ApiaryService registration completed");
+
+            LOGGER.info("Registering for HiveService...");
+            hiveService.addObserver(this);
+            LOGGER.info("HiveService registration completed");
+
+            LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
+
+            // Continue with rest of initialization
+            LOGGER.info("Setting up filter options...");
+            setupFilterOptions();
+
+            LOGGER.info("Setting up table columns...");
+            setupTableColumns();
+
+            LOGGER.info("Initializing observable lists...");
+            cartItems = FXCollections.observableArrayList();
+            orders = FXCollections.observableArrayList();
+            apiaries = FXCollections.observableArrayList();
+
+            // Bind lists to tables
+            cartTable.setItems(cartItems);
+            ordersTable.setItems(orders);
+            apiariesTable.setItems(apiaries);
+
+            // Set up search listeners and other initialization...
+            LOGGER.info("Setting up event listeners...");
+            setupEventListeners();
+
+            LOGGER.info("=== CLIENT DASHBOARD INITIALIZE COMPLETED SUCCESSFULLY ===");
+
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error registering as observer", e);
+            LOGGER.log(Level.SEVERE, "CRITICAL ERROR in ClientDashboard initialize()", e);
+            e.printStackTrace();
+            throw e; // Re-throw to see if this is causing silent failures
         }
+    }
 
-        LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
-
-        // Set up filter options
-        setupFilterOptions();
-
-        // Setup table cell factories
-        setupTableColumns();
-
-        // Initialize observable lists
-        cartItems = FXCollections.observableArrayList();
-        orders = FXCollections.observableArrayList();
-        apiaries = FXCollections.observableArrayList();
-
-        // Bind lists to tables
-        cartTable.setItems(cartItems);
-        ordersTable.setItems(orders);
-        apiariesTable.setItems(apiaries);
-
-        // Set up search listeners
-        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.equals(oldVal)) {
-                currentPage = 0; // Reset to first page on new search
-                handleSearchProducts();
-            }
-        });
-
-        apiarySearchField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.equals(oldVal)) {
-                handleSearchApiaries();
-            }
-        });
-
-        // Add change listeners to filters
-        categoryFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
-            currentCategory = "All".equals(newVal) ? null : newVal;
-            currentPage = 0;
-            loadProducts();
-        });
-
-        priceFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
-            setPriceRange(newVal);
-            currentPage = 0;
-            loadProducts();
-        });
-
-        sortOptions.valueProperty().addListener((obs, oldVal, newVal) -> {
-            setSortOptions(newVal);
-            loadProducts();
-        });
-
-        apiaryLocationFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
-            handleSearchApiaries();
-        });
-
-        // Set up tab change listener
-        mainTabPane.getSelectionModel().selectedIndexProperty().addListener((obs, oldVal, newVal) -> {
-            // Refresh data when switching tabs
-            if (client != null) {
-                switch (newVal.intValue()) {
-                    case 0: // Honey Products tab
-                        loadProducts();
-                        break;
-                    case 1: // Shopping Cart tab
-                        loadCartItems();
-                        break;
-                    case 2: // Orders tab
-                        loadOrders();
-                        break;
-                    case 3: // Apiaries tab
-                        loadApiaries();
-                        break;
+    private void setupEventListeners() {
+        try {
+            // Set up search listeners
+            searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal.equals(oldVal)) {
+                    currentPage = 0; // Reset to first page on new search
+                    handleSearchProducts();
                 }
-            }
-        });
-        LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
+            });
 
-        testObserverPattern();
+            apiarySearchField.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal.equals(oldVal)) {
+                    handleSearchApiaries();
+                }
+            });
+
+            // Add change listeners to filters
+            categoryFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
+                currentCategory = "All".equals(newVal) ? null : newVal;
+                currentPage = 0;
+                loadProducts();
+            });
+
+            priceFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
+                setPriceRange(newVal);
+                currentPage = 0;
+                loadProducts();
+            });
+
+            sortOptions.valueProperty().addListener((obs, oldVal, newVal) -> {
+                setSortOptions(newVal);
+                loadProducts();
+            });
+
+            apiaryLocationFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
+                handleSearchApiaries();
+            });
+
+            // Set up tab change listener
+            mainTabPane.getSelectionModel().selectedIndexProperty().addListener((obs, oldVal, newVal) -> {
+                // Refresh data when switching tabs
+                if (client != null) {
+                    switch (newVal.intValue()) {
+                        case 0: // Honey Products tab
+                            loadProducts();
+                            break;
+                        case 1: // Shopping Cart tab
+                            loadCartItems();
+                            break;
+                        case 2: // Orders tab
+                            loadOrders();
+                            break;
+                        case 3: // Apiaries tab
+                            loadApiaries();
+                            break;
+                    }
+                }
+            });
+
+            LOGGER.info("Event listeners setup completed");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up event listeners", e);
+            throw e;
+        }
     }
 
     private void testObserverPattern() {

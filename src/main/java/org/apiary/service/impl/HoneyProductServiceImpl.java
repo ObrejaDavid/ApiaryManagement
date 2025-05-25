@@ -117,13 +117,23 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
 
             // ENHANCED OBSERVER DEBUGGING
             LOGGER.info("=== ABOUT TO NOTIFY OBSERVERS ===");
-            LOGGER.info("Observer count: " + countObservers());
-            logObserverDetails(); // This will show which observers are registered
+            LOGGER.info("Current observer count: " + countObservers());
+            LOGGER.info("Has observers: " + hasObservers());
+
+            // Log each observer specifically
+            logObserverDetails();
+
+            // Verify service instance
+            LOGGER.info("This HoneyProductService instance: " + this.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(this.hashCode()));
 
             EntityChangeEvent<HoneyProduct> event = new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedProduct, oldProduct);
 
-            LOGGER.info("=== NOTIFYING OBSERVERS ===");
+            LOGGER.info("=== NOTIFYING " + countObservers() + " OBSERVERS ===");
+            LOGGER.info("Event details: " + event.getType() + " | Entity: " + event.getEntityType());
+
             notifyObservers(event);
+
             LOGGER.info("=== OBSERVER NOTIFICATION COMPLETED ===");
 
             return updatedProduct;

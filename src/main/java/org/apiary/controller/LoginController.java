@@ -1,5 +1,6 @@
 package org.apiary.controller;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -293,22 +294,48 @@ public class LoginController {
 
     private void openClientDashboard(Client client) {
         try {
+            LOGGER.info("=== OPENING CLIENT DASHBOARD ===");
+            LOGGER.info("Loading FXML...");
+
             // Load the client dashboard
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/clientDashboard.fxml"));
             Parent root = loader.load();
 
+            LOGGER.info("FXML loaded successfully");
+
             // Get controller and set client
             ClientDashboardController controller = loader.getController();
-            controller.setClient(client);
+            LOGGER.info("Controller obtained: " + controller.getClass().getSimpleName() + "@" +
+                    Integer.toHexString(controller.hashCode()));
 
-            // CREATE NEW WINDOW instead of replacing current scene
+            // Set client immediately (no Platform.runLater)
+            LOGGER.info("Setting client on controller...");
+            controller.setClient(client);
+            LOGGER.info("Client set on controller successfully");
+
+            // CREATE NEW WINDOW
             Stage clientStage = new Stage();
             clientStage.setScene(new Scene(root));
             clientStage.setTitle("Client Dashboard - Apiary Management System");
+
+            LOGGER.info("Showing client dashboard window...");
             clientStage.show();
 
-            // Log the registration for debugging
-            LOGGER.info("Opened Client Dashboard in new window");
+            // Close the login window
+            Stage loginStage = (Stage) loginButton.getScene().getWindow();
+            loginStage.close();
+
+            LOGGER.info("=== CLIENT DASHBOARD OPENED SUCCESSFULLY ===");
+
+            // Log final observer count
+            Platform.runLater(() -> {
+                try {
+                    Thread.sleep(1000); // Give time for everything to settle
+                    ServiceFactory.logServiceInstances();
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error in delayed service logging", e);
+                }
+            });
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error opening client dashboard", e);
@@ -325,7 +352,24 @@ public class LoginController {
 
             // Get controller and set beekeeper
             BeekeeperDashboardController controller = loader.getController();
-            controller.setBeekeeper(beekeeper);
+
+            // ADD DELAY TO ENSURE PROPER INITIALIZATION
+            Platform.runLater(() -> {
+                try {
+                    Thread.sleep(500); // Give time for initialization
+                    controller.setBeekeeper(beekeeper);
+
+                    // Log final observer count after beekeeper is set
+                    if (ServiceFactory.getHoneyProductService() instanceof org.apiary.utils.observer.EventManager) {
+                        org.apiary.utils.observer.EventManager<?> eventManager =
+                                (org.apiary.utils.observer.EventManager<?>) ServiceFactory.getHoneyProductService();
+                        LOGGER.info("FINAL BEEKEEPER DASHBOARD - HoneyProductService has " +
+                                eventManager.countObservers() + " observers");
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error in delayed beekeeper setup", e);
+                }
+            });
 
             // CREATE NEW WINDOW instead of replacing current scene
             Stage beekeeperStage = new Stage();
@@ -333,8 +377,12 @@ public class LoginController {
             beekeeperStage.setTitle("Beekeeper Dashboard - Apiary Management System");
             beekeeperStage.show();
 
+            // Close the login window
+            Stage loginStage = (Stage) loginButton.getScene().getWindow();
+            loginStage.close();
+
             // Log the registration for debugging
-            LOGGER.info("Opened Beekeeper Dashboard in new window");
+            LOGGER.info("Opened Beekeeper Dashboard in new window and closed login window");
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error opening beekeeper dashboard", e);
