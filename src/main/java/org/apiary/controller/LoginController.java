@@ -255,6 +255,42 @@ public class LoginController {
         }
     }
 
+    @FXML
+    private void handleOpenTestClient() {
+        try {
+            // Create a test client
+            Client testClient = new Client("testclient", "hashedpassword");
+            testClient.setUserId(999); // Test ID
+            testClient.setFullName("Test Client");
+            testClient.setEmail("test@client.com");
+
+            LOGGER.info("Opening test client dashboard");
+            openClientDashboard(testClient);
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error opening test client", e);
+            showAlert(Alert.AlertType.ERROR, "Error", "Could not open test client: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleOpenTestBeekeeper() {
+        try {
+            // Create a test beekeeper
+            Beekeeper testBeekeeper = new Beekeeper("testbeekeeper", "hashedpassword");
+            testBeekeeper.setUserId(998); // Test ID
+            testBeekeeper.setPhone("123-456-7890");
+            testBeekeeper.setAddress("Test Address");
+
+            LOGGER.info("Opening test beekeeper dashboard");
+            openBeekeeperDashboard(testBeekeeper);
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error opening test beekeeper", e);
+            showAlert(Alert.AlertType.ERROR, "Error", "Could not open test beekeeper: " + e.getMessage());
+        }
+    }
+
     private void openClientDashboard(Client client) {
         try {
             // Load the client dashboard
@@ -265,11 +301,15 @@ public class LoginController {
             ClientDashboardController controller = loader.getController();
             controller.setClient(client);
 
-            // Show dashboard
-            Stage stage = (Stage) loginButton.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Client Dashboard - Apiary Management System");
-            stage.show();
+            // CREATE NEW WINDOW instead of replacing current scene
+            Stage clientStage = new Stage();
+            clientStage.setScene(new Scene(root));
+            clientStage.setTitle("Client Dashboard - Apiary Management System");
+            clientStage.show();
+
+            // Log the registration for debugging
+            LOGGER.info("Opened Client Dashboard in new window");
+
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error opening client dashboard", e);
             showAlert(Alert.AlertType.ERROR, "Navigation Error",
@@ -287,11 +327,15 @@ public class LoginController {
             BeekeeperDashboardController controller = loader.getController();
             controller.setBeekeeper(beekeeper);
 
-            // Show dashboard
-            Stage stage = (Stage) loginButton.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Beekeeper Dashboard - Apiary Management System");
-            stage.show();
+            // CREATE NEW WINDOW instead of replacing current scene
+            Stage beekeeperStage = new Stage();
+            beekeeperStage.setScene(new Scene(root));
+            beekeeperStage.setTitle("Beekeeper Dashboard - Apiary Management System");
+            beekeeperStage.show();
+
+            // Log the registration for debugging
+            LOGGER.info("Opened Beekeeper Dashboard in new window");
+
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error opening beekeeper dashboard", e);
             showAlert(Alert.AlertType.ERROR, "Navigation Error",

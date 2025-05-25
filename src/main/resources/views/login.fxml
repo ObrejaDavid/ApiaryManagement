@@ -139,4 +139,11 @@
             <Text text="© 2025 Apiary Management System" styleClass="footer-text"/>
         </HBox>
     </bottom>
+
+    <Separator/>
+    <Label text="Developer Testing" styleClass="subsection-title"/>
+    <HBox spacing="10" alignment="CENTER">
+        <Button text="Open Test Client" onAction="#handleOpenTestClient" styleClass="secondary-button"/>
+        <Button text="Open Test Beekeeper" onAction="#handleOpenTestBeekeeper" styleClass="secondary-button"/>
+    </HBox>
 </BorderPane>

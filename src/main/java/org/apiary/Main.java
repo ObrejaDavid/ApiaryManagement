@@ -7,6 +7,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.apiary.config.HibernateConfig;
+import org.apiary.service.ServiceFactory;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
@@ -15,6 +16,8 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         try {
+            ServiceFactory.logServiceInstances();
+
             // Test database connection
             SessionFactory sessionFactory = HibernateConfig.getSessionFactory();
             try (Session session = sessionFactory.openSession()) {
@@ -45,6 +48,9 @@ public class Main extends Application {
 
     @Override
     public void stop() {
+        // Close Spring context first
+        ServiceFactory.shutdown();
+
         // Close Hibernate SessionFactory
         if (HibernateConfig.getSessionFactory() != null) {
             HibernateConfig.getSessionFactory().close();

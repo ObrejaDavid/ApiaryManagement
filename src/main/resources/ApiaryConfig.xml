@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                          http://www.springframework.org/schema/beans/spring-beans.xsd
+                          http://www.springframework.org/schema/util
+                          http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <!-- Database Properties -->
+    <util:properties id="dbProperties" location="classpath:application.properties"/>
+
+    <!-- Repository Beans -->
+    <bean id="userRepository" class="org.apiary.repository.impl.UserRepositoryImpl"/>
+
+    <bean id="apiaryRepository" class="org.apiary.repository.impl.ApiaryRepositoryImpl"/>
+
+    <bean id="hiveRepository" class="org.apiary.repository.impl.HiveRepositoryImpl"/>
+
+    <bean id="honeyProductRepository" class="org.apiary.repository.impl.HoneyProductRepositoryImpl"/>
+
+    <bean id="shoppingCartRepository" class="org.apiary.repository.impl.ShoppingCartRepositoryImpl"/>
+
+    <bean id="cartItemRepository" class="org.apiary.repository.impl.CartItemRepositoryImpl"/>
+
+    <bean id="orderRepository" class="org.apiary.repository.impl.OrderRepositoryImpl"/>
+
+    <bean id="orderItemRepository" class="org.apiary.repository.impl.OrderItemRepositoryImpl"/>
+
+    <bean id="paymentRepository" class="org.apiary.repository.impl.PaymentRepositoryImpl"/>
+
+    <!-- Service Beans -->
+    <bean id="userService" class="org.apiary.service.impl.UserServiceImpl">
+        <constructor-arg ref="userRepository"/>
+    </bean>
+
+    <bean id="apiaryService" class="org.apiary.service.impl.ApiaryServiceImpl">
+        <constructor-arg ref="apiaryRepository"/>
+    </bean>
+
+    <bean id="hiveService" class="org.apiary.service.impl.HiveServiceImpl">
+        <constructor-arg ref="hiveRepository"/>
+        <constructor-arg ref="apiaryService"/>
+    </bean>
+
+    <bean id="honeyProductService" class="org.apiary.service.impl.HoneyProductServiceImpl">
+        <constructor-arg ref="honeyProductRepository"/>
+        <constructor-arg ref="apiaryService"/>
+        <constructor-arg ref="hiveService"/>
+    </bean>
+
+    <bean id="shoppingCartService" class="org.apiary.service.impl.ShoppingCartServiceImpl">
+        <constructor-arg ref="shoppingCartRepository"/>
+        <constructor-arg ref="cartItemRepository"/>
+        <constructor-arg ref="honeyProductRepository"/>
+    </bean>
+
+    <bean id="paymentService" class="org.apiary.service.impl.PaymentServiceImpl">
+        <constructor-arg ref="paymentRepository"/>
+    </bean>
+
+    <bean id="orderService" class="org.apiary.service.impl.OrderServiceImpl">
+        <constructor-arg ref="orderRepository"/>
+        <constructor-arg ref="orderItemRepository"/>
+        <constructor-arg ref="shoppingCartService"/>
+        <constructor-arg ref="paymentService"/>
+        <constructor-arg ref="honeyProductService"/>
+        <constructor-arg ref="honeyProductRepository"/>
+    </bean>
+
+    <!-- All Services Aggregator -->
+    <bean id="allServices" class="org.apiary.service.AllServices">
+        <constructor-arg ref="userService"/>
+        <constructor-arg ref="apiaryService"/>
+        <constructor-arg ref="hiveService"/>
+        <constructor-arg ref="honeyProductService"/>
+        <constructor-arg ref="shoppingCartService"/>
+        <constructor-arg ref="orderService"/>
+        <constructor-arg ref="paymentService"/>
+    </bean>
+
+    <bean id="databaseProperties" class="org.apiary.config.DatabaseProperties">
+        <constructor-arg ref="dbProperties"/>
+    </bean>
+</beans>

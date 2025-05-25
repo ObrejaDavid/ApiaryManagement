@@ -1070,6 +1070,11 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
     private void handleEditProduct(HoneyProduct product) {
         try {
+            // CAPTURE ORIGINAL VALUES BEFORE OPENING DIALOG
+            BigDecimal originalPrice = product.getPrice();
+            BigDecimal originalQuantity = product.getQuantity();
+            String originalName = product.getName();
+
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/honeyProductDialog.fxml"));
             DialogPane dialogPane = loader.load();
 
@@ -1093,8 +1098,9 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 try {
                     LOGGER.info("=== BEEKEEPER UPDATING PRODUCT ===");
                     LOGGER.info("Product ID: " + updatedProduct.getProductId());
-                    LOGGER.info("Old Price: " + product.getPrice() + " -> New Price: " + updatedProduct.getPrice());
-                    LOGGER.info("Old Quantity: " + product.getQuantity() + " -> New Quantity: " + updatedProduct.getQuantity());
+                    // NOW CORRECTLY SHOWS OLD vs NEW VALUES
+                    LOGGER.info("Old Price: " + originalPrice + " -> New Price: " + updatedProduct.getPrice());
+                    LOGGER.info("Old Quantity: " + originalQuantity + " -> New Quantity: " + updatedProduct.getQuantity());
 
                     HoneyProduct savedProduct = honeyProductService.updateHoneyProduct(
                             updatedProduct.getProductId(),

@@ -95,14 +95,10 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
             }
 
             HoneyProduct product = productOpt.get();
-
-            // Create old product snapshot for comparison
             HoneyProduct oldProduct = new HoneyProduct(product.getName(), product.getDescription(),
                     product.getPrice(), product.getQuantity(), product.getApiary());
             oldProduct.setProductId(product.getProductId());
             oldProduct.setHive(product.getHive());
-
-            LOGGER.info("Old product values - Price: " + oldProduct.getPrice() + " | Quantity: " + oldProduct.getQuantity());
 
             // Check if product belongs to beekeeper
             if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
@@ -118,15 +114,18 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
             product.setQuantity(quantity);
 
             HoneyProduct updatedProduct = honeyProductRepository.save(product);
-            LOGGER.info("Product updated successfully. New values - Price: " + updatedProduct.getPrice() + " | Quantity: " + updatedProduct.getQuantity());
 
-            // Notify observers with detailed logging
-            LOGGER.info("Notifying " + countObservers() + " observers about product update");
+            // ENHANCED OBSERVER DEBUGGING
+            LOGGER.info("=== ABOUT TO NOTIFY OBSERVERS ===");
+            LOGGER.info("Observer count: " + countObservers());
+            logObserverDetails(); // This will show which observers are registered
+
             EntityChangeEvent<HoneyProduct> event = new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedProduct, oldProduct);
-            notifyObservers(event);
-            LOGGER.info("Observer notification completed for product update");
 
-            LOGGER.info("=== HONEY PRODUCT UPDATE COMPLETED ===");
+            LOGGER.info("=== NOTIFYING OBSERVERS ===");
+            notifyObservers(event);
+            LOGGER.info("=== OBSERVER NOTIFICATION COMPLETED ===");
+
             return updatedProduct;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error updating honey product: " + productId, e);
