@@ -17,7 +17,6 @@ public class Client extends User {
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL)
     private List<Order> orders = new ArrayList<>();
 
-    // Additional client-specific fields
     @Column(name = "fullName")
     private String fullName;
 
@@ -30,7 +29,6 @@ public class Client extends User {
     @Column(name = "phone")
     private String phone;
 
-    // Default constructor required by JPA
     public Client() {}
 
     public Client(String username, String password) {

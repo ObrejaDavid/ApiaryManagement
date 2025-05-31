@@ -35,7 +35,6 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         try {
             Optional<ShoppingCart> cartOpt = shoppingCartRepository.findByClient(client);
             if (cartOpt.isEmpty()) {
-                // Create a new shopping cart if one doesn't exist
                 ShoppingCart cart = new ShoppingCart(client);
                 ShoppingCart savedCart = shoppingCartRepository.save(cart);
                 return Optional.of(savedCart);
@@ -101,17 +100,12 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
             }
 
             ShoppingCart cart = cartOpt.get();
-
-            // Check if product already exists in cart
             Optional<CartItem> existingItemOpt = cartItemRepository.findByCartAndProduct(cart, actualProduct);
-
             if (existingItemOpt.isPresent()) {
-                // Update quantity
                 CartItem existingItem = existingItemOpt.get();
                 existingItem.setQuantity(existingItem.getQuantity() + quantity);
                 cartItemRepository.save(existingItem);
             } else {
-                // Create new cart item
                 CartItem newItem = new CartItem(cart, actualProduct, quantity);
                 cartItemRepository.save(newItem);
             }
@@ -129,33 +123,24 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Override
     public boolean updateCartItemQuantity(Client client, Integer cartItemId, int quantity) {
         try {
-            // Validate cart item
             Optional<CartItem> itemOpt = cartItemRepository.findById(cartItemId);
             if (itemOpt.isEmpty()) {
                 LOGGER.warning("Cart item not found: " + cartItemId);
                 return false;
             }
-
             CartItem item = itemOpt.get();
-
-            // Check if item belongs to client
             Optional<ShoppingCart> cartOpt = findByClient(client);
             if (cartOpt.isEmpty() || !item.getCart().equals(cartOpt.get())) {
                 LOGGER.warning("Cart item does not belong to client: " +
                         cartItemId + ", " + client.getUsername());
                 return false;
             }
-
-            // Check if product has enough quantity
             HoneyProduct product = item.getProduct();
             if (product.getQuantity().compareTo(BigDecimal.valueOf(quantity)) < 0) {
                 LOGGER.warning("Not enough quantity available for product: " + product.getProductId());
                 return false;
             }
-
-            // Update quantity
             if (quantity <= 0) {
-                // If quantity is 0 or negative, remove item from cart
                 cartItemRepository.delete(item);
             } else {
                 item.setQuantity(quantity);
@@ -175,26 +160,19 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Override
     public boolean removeFromCart(Client client, Integer cartItemId) {
         try {
-            // Validate cart item
             Optional<CartItem> itemOpt = cartItemRepository.findById(cartItemId);
             if (itemOpt.isEmpty()) {
                 LOGGER.warning("Cart item not found: " + cartItemId);
                 return false;
             }
-
             CartItem item = itemOpt.get();
-
-            // Check if item belongs to client
             Optional<ShoppingCart> cartOpt = findByClient(client);
             if (cartOpt.isEmpty() || !item.getCart().equals(cartOpt.get())) {
                 LOGGER.warning("Cart item does not belong to client: " +
                         cartItemId + ", " + client.getUsername());
                 return false;
             }
-
-            // Remove item
             cartItemRepository.delete(item);
-
             LOGGER.info("Removed cart item: " + cartItemId +
                     " for client: " + client.getUsername());
             return true;
@@ -213,12 +191,8 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
                 LOGGER.warning("Shopping cart not found for client: " + client.getUsername());
                 return false;
             }
-
             ShoppingCart cart = cartOpt.get();
-
-            // Delete all cart items
             cartItemRepository.deleteByCart(cart);
-
             LOGGER.info("Cleared cart for client: " + client.getUsername());
             return true;
         } catch (Exception e) {

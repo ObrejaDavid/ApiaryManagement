@@ -58,8 +58,6 @@ public class ProductDetailController {
             apiaryNameLabel.setText(product.getApiary().getName());
             apiaryLocationLabel.setText(product.getApiary().getLocation());
             harvestDateLabel.setText("Recently harvested");
-
-            // Set max quantity based on available stock
             quantitySpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(
                     1, product.getQuantity().intValue(), 1));
         }
@@ -67,7 +65,6 @@ public class ProductDetailController {
 
     @FXML
     private void handleBack() {
-        // Close this window
         quantitySpinner.getScene().getWindow().hide();
     }
 

@@ -105,41 +105,9 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     private String currentSortBy = "name";
     private String currentSortDir = "asc";
 
-    // Observable lists
     private ObservableList<CartItem> cartItems;
     private ObservableList<Order> orders;
     private ObservableList<Apiary> apiaries;
-
-
-    /**
-     * Test method to verify observer registration
-     */
-    private void testObserverRegistration() {
-        LOGGER.info("=== TESTING OBSERVER REGISTRATION ===");
-
-        try {
-            // Check if services have observers
-            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
-                org.apiary.utils.observer.EventManager<?> eventManager =
-                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
-                LOGGER.info("HoneyProductService has " + eventManager.countObservers() + " observers");
-            }
-
-            // Create a test method to manually trigger an update
-            Platform.runLater(() -> {
-                LOGGER.info("Testing manual observer notification...");
-                try {
-                    // Force a product refresh to test the mechanism
-                    forceRefreshProducts();
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error in test observer", e);
-                }
-            });
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error testing observer registration", e);
-        }
-    }
 
     @FXML
     private void initialize() {
@@ -254,57 +222,6 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error setting up event listeners", e);
             throw e;
-        }
-    }
-
-    private void testObserverPattern() {
-        LOGGER.info("=== TESTING OBSERVER PATTERN ===");
-
-        try {
-            // Log service factory instances
-            ServiceFactory.logServiceInstances();
-
-            // Force a refresh to test the mechanism
-            Platform.runLater(() -> {
-                try {
-                    LOGGER.info("Testing manual product refresh...");
-                    forceRefreshProducts();
-                    LOGGER.info("Manual product refresh completed");
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error in test observer pattern", e);
-                }
-            });
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error testing observer pattern", e);
-        }
-
-        LOGGER.info("=== OBSERVER PATTERN TEST COMPLETED ===");
-    }
-
-    @FXML
-    private void handleTestObserverNotification() {
-        LOGGER.info("=== MANUAL OBSERVER NOTIFICATION TEST ===");
-
-        try {
-            // Create a dummy product for testing
-            HoneyProduct testProduct = new HoneyProduct();
-            testProduct.setProductId(999999);
-            testProduct.setName("Test Product");
-            testProduct.setPrice(new BigDecimal("99.99"));
-            testProduct.setQuantity(new BigDecimal("10"));
-
-            // Create a test event
-            EntityChangeEvent<HoneyProduct> testEvent = new EntityChangeEvent<>(
-                    EntityChangeEvent.Type.UPDATED, testProduct);
-
-            LOGGER.info("Manually triggering update with test event...");
-            update(testEvent);
-
-            LOGGER.info("Manual observer test completed");
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error in manual observer test", e);
         }
     }
 
@@ -423,27 +340,21 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             LOGGER.info("=== FORCE REFRESH PRODUCTS STARTED ===");
             LOGGER.info("Current products container children count: " + productsContainer.getChildren().size());
 
-            // Clear the products container immediately and force layout update
             productsContainer.getChildren().clear();
             productsContainer.requestLayout();
 
             LOGGER.info("Products container cleared, children count: " + productsContainer.getChildren().size());
 
-            // Force a layout pass
             Platform.runLater(() -> {
                 try {
                     LOGGER.info("=== EXECUTING DELAYED REFRESH ===");
 
-                    // Double-check container is empty
                     if (!productsContainer.getChildren().isEmpty()) {
                         LOGGER.warning("Container not empty after clear, forcing clear again");
                         productsContainer.getChildren().clear();
                     }
 
-                    // Load fresh products
                     loadProducts();
-
-                    // Force layout update
                     productsContainer.requestLayout();
 
                     LOGGER.info("=== DELAYED REFRESH COMPLETED ===");
@@ -457,34 +368,6 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error in forceRefreshProducts", e);
         }
-    }
-    /**
-     * Debug method to check current UI state
-     */
-    private void debugCurrentUIState() {
-        LOGGER.info("=== DEBUGGING CURRENT UI STATE ===");
-        LOGGER.info("Products container children count: " + productsContainer.getChildren().size());
-
-        for (int i = 0; i < productsContainer.getChildren().size(); i++) {
-            Node child = productsContainer.getChildren().get(i);
-            if (child instanceof VBox) {
-                VBox tile = (VBox) child;
-                LOGGER.info("Tile " + i + " ID: " + tile.getId());
-
-                // Find price label
-                for (Node tileChild : tile.getChildren()) {
-                    if (tileChild instanceof Label) {
-                        Label label = (Label) tileChild;
-                        if (label.getId() != null && label.getId().startsWith("price-")) {
-                            LOGGER.info("  Price label text: '" + label.getText() + "'");
-                        } else if (label.getId() != null && label.getId().startsWith("name-")) {
-                            LOGGER.info("  Name label text: '" + label.getText() + "'");
-                        }
-                    }
-                }
-            }
-        }
-        LOGGER.info("=== UI STATE DEBUG COMPLETED ===");
     }
 
     /**
@@ -563,7 +446,6 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                         (org.apiary.utils.observer.EventManager<?>) honeyProductService;
                 LOGGER.info("AFTER CLIENT registration - HoneyProductService has " +
                         eventManager.countObservers() + " observers");
-                eventManager.logObserverDetails();
             }
 
             LOGGER.info("=== CLIENT DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
@@ -587,21 +469,17 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                 int observerCount = eventManager.countObservers();
 
                 LOGGER.info("Current HoneyProductService observer count: " + observerCount);
-
-                // If we don't see ourselves in the observers, re-register
                 if (observerCount < 2) {
                     LOGGER.warning("Expected 2 observers but found " + observerCount + ". Re-registering...");
 
-                    // Re-register
                     honeyProductService.addObserver(this);
                     orderService.addObserver(this);
                     apiaryService.addObserver(this);
                     hiveService.addObserver(this);
 
-                    // Check again
+
                     int newCount = eventManager.countObservers();
                     LOGGER.info("After re-registration: " + newCount + " observers");
-                    eventManager.logObserverDetails();
                 }
             }
 
@@ -882,21 +760,12 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             LOGGER.info("Search term: '" + currentSearchTerm + "' | Category: " + currentCategory);
             LOGGER.info("Price range: " + minPrice + " - " + maxPrice);
 
-            // Debug current UI state before clearing
-            debugCurrentUIState();
-
-            // Clear existing products with forced update
             LOGGER.info("Clearing products container...");
             productsContainer.getChildren().clear();
             productsContainer.requestLayout();
 
-            // Verify it's actually cleared
             LOGGER.info("After clear - children count: " + productsContainer.getChildren().size());
-
-            // Create pageable for pagination
             Pageable pageable = new Pageable(currentPage, pageSize, currentSortBy, currentSortDir);
-
-            // Get products from service with fresh data
             Page<HoneyProduct> productPage;
             if (!StringUtils.isBlank(currentSearchTerm)) {
                 LOGGER.info("Loading products by search term: " + currentSearchTerm);
@@ -914,11 +783,8 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             LOGGER.info("Loaded " + productPage.getContent().size() + " products on page " +
                     (currentPage + 1) + " of " + productPage.getTotalPages());
 
-            // Update pagination controls
             totalPages = productPage.getTotalPages();
             updatePaginationControls();
-
-            // Create product tiles with detailed logging
             int tileCount = 0;
             for (HoneyProduct product : productPage.getContent()) {
                 try {
@@ -932,13 +798,7 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                 }
             }
 
-            // Force layout update after all tiles are added
             productsContainer.requestLayout();
-
-            // Debug final UI state
-            LOGGER.info("After creating tiles - children count: " + productsContainer.getChildren().size());
-            debugCurrentUIState();
-
             LOGGER.info("=== PRODUCT LOADING COMPLETED - " + tileCount + " tiles created ===");
 
         } catch (Exception e) {
@@ -1009,10 +869,8 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
         productTile.setPadding(new Insets(10));
         productTile.setSpacing(5);
 
-        // Set a unique ID for debugging
         productTile.setId("product-tile-" + product.getProductId());
 
-        // Create image placeholder
         StackPane imageContainer = new StackPane();
         imageContainer.setPrefSize(180, 120);
 
@@ -1543,7 +1401,6 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                         showAlert(Alert.AlertType.INFORMATION, "Profile Updated",
                                 "Your profile has been updated successfully.");
 
-                        // Update welcome label with new name if changed
                         welcomeLabel.setText("Welcome, " + (StringUtils.isBlank(client.getFullName()) ?
                                 client.getUsername() : client.getFullName()));
                     } else {
@@ -1566,7 +1423,6 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     @FXML
     private void handleLogout() {
         try {
-            // Confirm logout
             Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
             confirmDialog.setTitle("Logout");
             confirmDialog.setHeaderText("Confirm Logout");
@@ -1574,10 +1430,8 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
 
             Optional<ButtonType> result = confirmDialog.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
-                // Cleanup observers
                 cleanup();
 
-                // Close only this dashboard window (login window remains open)
                 Stage stage = (Stage) welcomeLabel.getScene().getWindow();
                 stage.close();
 

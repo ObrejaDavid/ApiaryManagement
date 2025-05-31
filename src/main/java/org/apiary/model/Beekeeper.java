@@ -14,7 +14,6 @@ public class Beekeeper extends User {
     @OneToMany(mappedBy = "beekeeper", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Apiary> apiaries = new ArrayList<>();
 
-    // Additional beekeeper-specific fields can be added here
     @Column(name = "phone")
     private String phone;
 
@@ -24,7 +23,6 @@ public class Beekeeper extends User {
     @Column(name = "experience")
     private Integer yearsOfExperience;
 
-    // Default constructor required by JPA
     public Beekeeper() {}
 
     public Beekeeper(String username, String password) {

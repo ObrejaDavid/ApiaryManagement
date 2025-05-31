@@ -23,14 +23,12 @@ public class ShoppingCart {
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> items = new ArrayList<>();
 
-    // Default constructor required by JPA
     public ShoppingCart() {}
 
     public ShoppingCart(Client client) {
         this.client = client;
     }
 
-    // Getters and setters
     public Integer getCartId() {
         return cartId;
     }

@@ -37,9 +37,6 @@ public class EventManager<E extends Event> implements Observable<E> {
             } else {
                 LOGGER.warning("Observer already exists, not adding duplicate");
             }
-
-            // Log all current observers
-            logObserverDetails();
             LOGGER.info("=== ADD OBSERVER COMPLETED ===");
         } else {
             LOGGER.warning("Attempted to add null observer");
@@ -74,18 +71,6 @@ public class EventManager<E extends Event> implements Observable<E> {
     }
 
 
-    public void logObserverDetails() {
-        LOGGER.info("=== OBSERVER DETAILS ===");
-        LOGGER.info("Total observers: " + observers.size());
-
-        for (int i = 0; i < observers.size(); i++) {
-            Observer<E> observer = observers.get(i);
-            LOGGER.info("Observer " + (i + 1) + ": " + observer.getClass().getSimpleName() + "@" +
-                    Integer.toHexString(observer.hashCode()));
-        }
-
-        LOGGER.info("=== END OBSERVER DETAILS ===");
-    }
 
     /**
      * Get the number of observers

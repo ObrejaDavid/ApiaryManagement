@@ -20,7 +20,6 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
 
-    // Default constructor required by JPA
     public User() {}
 
     public User(String username, String password) {
@@ -28,7 +27,6 @@ public class User {
         this.password = password;
     }
 
-    // Getters and setters
     public Integer getUserId() {
         return userId;
     }

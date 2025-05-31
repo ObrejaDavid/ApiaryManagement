@@ -27,7 +27,6 @@ public class Payment {
     @Column(name = "date", nullable = false)
     private LocalDateTime date;
 
-    // Default constructor required by JPA
     public Payment() {
         this.date = LocalDateTime.now();
     }
@@ -39,7 +38,6 @@ public class Payment {
         this.date = LocalDateTime.now();
     }
 
-    // Getters and setters
     public Integer getTransactionId() {
         return transactionId;
     }

@@ -27,11 +27,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public boolean processPayment(Order order) {
         try {
-            // Process payment using payment system
             boolean paymentSuccessful = paymentSystem.processPayment(order);
-
-            // Payment is created and stored inside the PaymentSystem.processPayment() method
-
             LOGGER.info("Processed payment for order: " + order.getOrderId() +
                     " with result: " + paymentSuccessful);
             return paymentSuccessful;

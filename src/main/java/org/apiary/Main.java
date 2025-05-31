@@ -1,4 +1,3 @@
-// src/main/java/org/apiary/MainApplication.java
 package org.apiary;
 
 import javafx.application.Application;
@@ -16,13 +15,9 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         try {
-            ServiceFactory.logServiceInstances();
-
-            // Test database connection
             SessionFactory sessionFactory = HibernateConfig.getSessionFactory();
             try (Session session = sessionFactory.openSession()) {
                 session.beginTransaction();
-                // Test query
                 session.createQuery("SELECT COUNT(*) FROM User", Long.class).uniqueResult();
                 session.getTransaction().commit();
                 System.out.println("Database connection successful!");
@@ -30,7 +25,6 @@ public class Main extends Application {
         } catch (Exception e) {
             System.err.println("Database connection failed: " + e.getMessage());
             e.printStackTrace();
-            // Still try to load the app, but with warning
         }
 
         // Initialize Hibernate
@@ -48,15 +42,11 @@ public class Main extends Application {
 
     @Override
     public void stop() {
-        // Close Spring context first
         ServiceFactory.shutdown();
-
-        // Close Hibernate SessionFactory
         if (HibernateConfig.getSessionFactory() != null) {
             HibernateConfig.getSessionFactory().close();
         }
     }
-
     public static void main(String[] args) {
         launch(args);
     }

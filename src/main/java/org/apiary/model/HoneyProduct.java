@@ -33,7 +33,6 @@ public class HoneyProduct {
     @JoinColumn(name = "hiveId")
     private Hive hive;
 
-    // Default constructor required by JPA
     public HoneyProduct() {}
 
     public HoneyProduct(String name, String description, BigDecimal price, BigDecimal quantity, Apiary apiary) {
@@ -44,7 +43,6 @@ public class HoneyProduct {
         this.apiary = apiary;
     }
 
-    // Getters and setters
     public Integer getProductId() {
         return productId;
     }

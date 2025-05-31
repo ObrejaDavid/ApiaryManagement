@@ -26,8 +26,7 @@ public class ApiaryConfig {
         }
         return properties;
     }
-
-    // Repository Beans
+    // Repository
     @Bean
     public UserRepository userRepository() {
         return new UserRepositoryImpl();
@@ -73,7 +72,7 @@ public class ApiaryConfig {
         return new PaymentRepositoryImpl();
     }
 
-    // Service Beans
+    // Service
     @Bean
     public UserService userService(UserRepository userRepository) {
         return new UserServiceImpl(userRepository);

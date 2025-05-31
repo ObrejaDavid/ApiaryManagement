@@ -35,7 +35,6 @@ public class Order {
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private Payment payment;
 
-    // Default constructor required by JPA
     public Order() {
         this.date = LocalDateTime.now();
         this.status = "PENDING";
@@ -49,7 +48,6 @@ public class Order {
         this.total = BigDecimal.ZERO;
     }
 
-    // Getters and setters
     public Integer getOrderId() {
         return orderId;
     }

@@ -27,7 +27,6 @@ public class CartItem {
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    // Default constructor required by JPA
     public CartItem() {}
 
     public CartItem(ShoppingCart cart, HoneyProduct product, Integer quantity) {
@@ -37,7 +36,6 @@ public class CartItem {
         this.price = product.getPrice();
     }
 
-    // Getters and setters
     public Integer getItemId() {
         return itemId;
     }

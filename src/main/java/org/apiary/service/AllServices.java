@@ -2,9 +2,6 @@ package org.apiary.service;
 
 import org.apiary.service.interfaces.*;
 
-/**
- * Aggregator class that holds all services for easy access
- */
 public class AllServices {
     private final UserService userService;
     private final ApiaryService apiaryService;
@@ -30,7 +27,6 @@ public class AllServices {
         this.paymentService = paymentService;
     }
 
-    // Getters
     public UserService getUserService() {
         return userService;
     }

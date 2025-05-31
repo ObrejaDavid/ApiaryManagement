@@ -49,8 +49,6 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
         try {
             LOGGER.info("=== STARTING ORDER CREATION WITH DIRECT PAYMENT ===");
             LOGGER.info("Client: " + client.getUsername() + " (ID: " + client.getUserId() + ")");
-
-            // Get cart items with detailed logging
             List<CartItem> cartItems = shoppingCartService.getCartItems(client);
             LOGGER.info("Found " + cartItems.size() + " cart items");
 
@@ -59,7 +57,6 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                 return null;
             }
 
-            // Log each cart item and validate stock
             for (int i = 0; i < cartItems.size(); i++) {
                 CartItem item = cartItems.get(i);
                 LOGGER.info("Cart Item " + (i+1) + ": " + item.getProduct().getName() +
@@ -67,7 +64,6 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                         " | Price: " + item.getPrice() +
                         " | Product ID: " + item.getProduct().getProductId());
 
-                // Check product availability
                 Optional<HoneyProduct> productOpt = honeyProductService.findById(item.getProduct().getProductId());
                 if (productOpt.isEmpty()) {
                     LOGGER.severe("Product not found in database: " + item.getProduct().getProductId());
@@ -84,35 +80,23 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                 }
             }
 
-            // Create order with PAID status directly
-            LOGGER.info("Creating new order object with PAID status...");
             Order order = new Order(client);
-            order.setStatus("PAID"); // Set directly to PAID instead of PENDING
-            LOGGER.info("Order object created with PAID status");
-
-            // Verify client is properly attached
+            order.setStatus("PAID");
             if (order.getClient() == null || order.getClient().getUserId() == null) {
                 LOGGER.severe("Client is not properly attached to order");
                 return null;
             }
             LOGGER.info("Client properly attached to order");
 
-            // Create order items
-            LOGGER.info("Creating order items...");
             for (CartItem cartItem : cartItems) {
                 try {
-                    LOGGER.info("Processing cart item: " + cartItem.getProduct().getName());
-
                     OrderItem orderItem = new OrderItem(
                             order,
                             cartItem.getProduct(),
                             cartItem.getQuantity(),
                             cartItem.getPrice());
 
-                    // Use the proper addItem method which handles bidirectional relationship
                     order.addItem(orderItem);
-                    LOGGER.info("Added order item successfully");
-
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error creating order item for product: " +
                             cartItem.getProduct().getName(), e);
@@ -120,30 +104,22 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                 }
             }
 
-            // Save order first
-            LOGGER.info("Attempting to save order to database...");
             try {
                 Order savedOrder = orderRepository.save(order);
                 if (savedOrder == null) {
                     LOGGER.severe("Repository returned null after save attempt");
                     return null;
                 }
-
                 if (savedOrder.getOrderId() == null) {
                     LOGGER.severe("Saved order has null ID");
                     return null;
                 }
-
                 LOGGER.info("Order saved successfully with ID: " + savedOrder.getOrderId());
-
-                // Process payment automatically (simulate payment processing)
                 LOGGER.info("Processing payment automatically for order: " + savedOrder.getOrderId());
                 boolean paymentSuccess = paymentService.processPayment(savedOrder);
 
                 if (paymentSuccess) {
                     LOGGER.info("Payment successful, updating product quantities");
-
-                    // Update product quantities immediately
                     List<OrderItem> orderItems = orderItemRepository.findByOrder(savedOrder);
                     boolean allStockUpdated = true;
 
@@ -168,24 +144,18 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
 
                     if (!allStockUpdated) {
                         LOGGER.severe("Stock update failed, canceling order");
-                        // Revert order status or handle failure
                         savedOrder.setStatus("CANCELED");
                         orderRepository.save(savedOrder);
-
-                        // Notify observers about the canceled order
                         notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, savedOrder));
-
                         return null;
                     }
 
-                    // Clear cart only after successful payment and stock update
                     LOGGER.info("Clearing shopping cart for client: " + client.getUsername());
                     boolean cartCleared = shoppingCartService.clearCart(client);
                     if (!cartCleared) {
                         LOGGER.warning("Failed to clear cart for client: " + client.getUsername());
                     }
 
-                    // Notify observers about the new order
                     notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedOrder));
 
                     LOGGER.info("=== ORDER CREATION WITH PAYMENT COMPLETED SUCCESSFULLY ===");
@@ -193,11 +163,9 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
 
                 } else {
                     LOGGER.severe("Payment failed for order: " + savedOrder.getOrderId());
-                    // Mark order as failed
                     savedOrder.setStatus("CANCELED");
                     orderRepository.save(savedOrder);
 
-                    // Notify observers about the failed order
                     notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, savedOrder));
 
                     return null;
@@ -311,40 +279,28 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
             oldOrder.setTotal(order.getTotal());
             oldOrder.setStatus(order.getStatus());
 
-            // Check if order is already paid
             if ("PAID".equals(order.getStatus())) {
                 LOGGER.warning("Order is already paid: " + orderId);
                 return true;
             }
-
-            // Check if order is already canceled
             if ("CANCELED".equals(order.getStatus())) {
                 LOGGER.warning("Cannot process payment for canceled order: " + orderId);
                 return false;
             }
 
             LOGGER.info("Processing payment for order: " + orderId);
-
-            // Process payment
             boolean paymentSuccess = paymentService.processPayment(order);
-
             if (paymentSuccess) {
                 LOGGER.info("Payment successful, updating order status and product quantities");
-
-                // Update order status
                 order.setStatus("PAID");
                 Order updatedOrder = orderRepository.save(order);
 
                 if (updatedOrder != null) {
-                    // Update product quantities
                     List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
                     for (OrderItem item : orderItems) {
-                        // Convert quantity to BigDecimal for the service call
                         BigDecimal quantityToSubtract = BigDecimal.valueOf(item.getQuantity());
-
                         LOGGER.info("Updating stock for product " + item.getProduct().getProductId() +
                                 " - subtracting " + quantityToSubtract + " units");
-
                         boolean stockUpdated = honeyProductService.updateQuantityAfterPurchase(
                                 item.getProduct().getProductId(),
                                 quantityToSubtract);
@@ -355,8 +311,6 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                             LOGGER.info("Successfully updated stock for product: " + item.getProduct().getProductId());
                         }
                     }
-
-                    // Notify observers about the payment success
                     notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedOrder, oldOrder));
 
                     LOGGER.info("Payment processed successfully for order: " + orderId + " and notified observers");
@@ -390,8 +344,6 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
             oldOrder.setDate(order.getDate());
             oldOrder.setTotal(order.getTotal());
             oldOrder.setStatus(order.getStatus());
-
-            // Validate status transition
             if (!isValidStatusTransition(order.getStatus(), status)) {
                 LOGGER.warning("Invalid status transition from " + order.getStatus() +
                         " to " + status + " for order: " + orderId);
@@ -400,9 +352,7 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
 
             order.setStatus(status);
             Order updatedOrder = orderRepository.save(order);
-
             if (updatedOrder != null) {
-                // Notify observers about the status change
                 notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedOrder, oldOrder));
 
                 LOGGER.info("Updated status to " + status + " for order: " + orderId + " and notified observers");
@@ -425,46 +375,35 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                 LOGGER.warning("Order not found: " + orderId);
                 return false;
             }
-
             Order order = orderOpt.get();
             Order oldOrder = new Order(order.getClient());
             oldOrder.setOrderId(order.getOrderId());
             oldOrder.setDate(order.getDate());
             oldOrder.setTotal(order.getTotal());
             oldOrder.setStatus(order.getStatus());
-
-            // Check if order belongs to client
             if (!order.getClient().equals(client)) {
                 LOGGER.warning("Order does not belong to client: " +
                         orderId + ", " + client.getUsername());
                 return false;
             }
-
-            // Check if order can be canceled (only PENDING and PAID orders can be canceled)
             if (!"PENDING".equals(order.getStatus()) && !"PAID".equals(order.getStatus())) {
                 LOGGER.warning("Cannot cancel order with status: " + order.getStatus() +
                         " for order: " + orderId);
                 return false;
             }
-
-            // Restore stock if order was paid
             if ("PAID".equals(order.getStatus())) {
                 LOGGER.info("Restoring stock quantities for canceled order: " + orderId);
 
                 List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
                 for (OrderItem item : orderItems) {
                     try {
-                        // Get current product to add back the quantity
                         Optional<HoneyProduct> productOpt = honeyProductRepository.findById(item.getProduct().getProductId());
                         if (productOpt.isPresent()) {
                             HoneyProduct product = productOpt.get();
                             BigDecimal currentQuantity = product.getQuantity();
                             BigDecimal restoredQuantity = currentQuantity.add(BigDecimal.valueOf(item.getQuantity()));
-
-                            // Update quantity directly
                             product.setQuantity(restoredQuantity);
                             HoneyProduct savedProduct = honeyProductRepository.save(product);
-
                             if (savedProduct != null) {
                                 LOGGER.info("Restored " + item.getQuantity() + " units to product: " +
                                         product.getName() + " (new quantity: " + restoredQuantity + ")");
@@ -480,15 +419,10 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                     }
                 }
             }
-
-            // Update order status to canceled
             order.setStatus("CANCELED");
             Order updatedOrder = orderRepository.save(order);
-
             if (updatedOrder != null) {
-                // Notify observers about the cancellation
                 notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedOrder, oldOrder));
-
                 LOGGER.info("Canceled order: " + orderId + " and notified observers" +
                         ("PAID".equals(oldOrder.getStatus()) ? " (restored stock quantities)" : ""));
                 return true;
@@ -519,22 +453,18 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
                     Optional<HoneyProduct> productOpt = honeyProductService.findById(item.getProduct().getProductId());
                     if (productOpt.isPresent()) {
                         HoneyProduct product = productOpt.get();
-
-                        // Get the actual beekeeper who owns this product
                         Beekeeper productOwner = product.getApiary().getBeekeeper();
 
                         BigDecimal currentQuantity = product.getQuantity();
                         BigDecimal quantityToRestore = BigDecimal.valueOf(item.getQuantity());
                         BigDecimal newQuantity = currentQuantity.add(quantityToRestore);
-
-                        // Update product quantity using the correct beekeeper
                         HoneyProduct updatedProduct = honeyProductService.updateHoneyProduct(
                                 product.getProductId(),
                                 product.getName(),
                                 product.getDescription(),
                                 product.getPrice(),
                                 newQuantity,
-                                productOwner  // Use the actual product owner
+                                productOwner
                         );
 
                         if (updatedProduct != null) {
@@ -597,14 +527,10 @@ public class OrderServiceImpl extends EventManager<EntityChangeEvent<?>> impleme
             LOGGER.info("Found " + allOrders.size() + " total orders in system");
 
             List<Order> beekeeperOrders = new ArrayList<>();
-
             for (Order order : allOrders) {
                 try {
-                    // Use the service to get order items instead of accessing lazy collection
                     List<OrderItem> orderItems = orderItemRepository.findByOrder(order);
                     LOGGER.info("Order " + order.getOrderId() + " has " + orderItems.size() + " items");
-
-                    // Check if any item belongs to this beekeeper
                     boolean belongsToBeekeeper = orderItems.stream()
                             .anyMatch(item -> {
                                 try {

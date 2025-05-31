@@ -137,46 +137,37 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
         LOGGER.info("=== BEEKEEPER DASHBOARD OBSERVER REGISTRATION COMPLETED ===");
 
-        // Initialize observable lists
         apiaries = FXCollections.observableArrayList();
         hives = FXCollections.observableArrayList();
         products = FXCollections.observableArrayList();
         orders = FXCollections.observableArrayList();
 
-        // Set up table columns
         setupTableColumns();
-
-        // Bind lists to tables
         apiariesTable.setItems(apiaries);
         hivesTable.setItems(hives);
         productsTable.setItems(products);
         ordersTable.setItems(orders);
 
-        // Set up combo boxes
         setupComboBoxes();
-
-        // Set up tab change listener
         mainTabPane.getSelectionModel().selectedIndexProperty().addListener((obs, oldVal, newVal) -> {
-            // Refresh data when switching tabs
             if (beekeeper != null) {
                 switch (newVal.intValue()) {
-                    case 0: // Apiaries tab
+                    case 0:
                         loadApiaries();
                         break;
-                    case 1: // Hives tab
+                    case 1:
                         loadHives();
                         break;
-                    case 2: // Products tab
+                    case 2:
                         loadProducts();
                         break;
-                    case 3: // Orders tab
+                    case 3:
                         loadOrders();
                         break;
                 }
             }
         });
 
-        // Set up filter change listeners
         apiaryFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 loadHivesByApiary(newVal);
@@ -195,8 +186,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         productHiveFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             loadProductsByFilters();
         });
-
-        // Initialize order status filter
         orderStatusFilterComboBox.getItems().addAll(
                 "All", "PENDING", "PAID", "DELIVERED", "CANCELED");
         orderStatusFilterComboBox.setValue("All");
@@ -206,18 +195,13 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     public void setBeekeeper(Beekeeper beekeeper) {
         this.beekeeper = beekeeper;
         welcomeLabel.setText("Welcome, " + beekeeper.getUsername());
-
         LOGGER.info("=== BEEKEEPER SET: " + beekeeper.getUsername() + " ===");
 
-        // Verify observer registration after setting beekeeper
         verifyBeekeeperObserverRegistration();
-
-        // Load initial data
         loadApiaries();
     }
 
     private void setupTableColumns() {
-        // Apiaries table
         apiaryIdColumn.setCellValueFactory(new PropertyValueFactory<>("apiaryId"));
         apiaryNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         apiaryLocationColumn.setCellValueFactory(new PropertyValueFactory<>("location"));
@@ -243,8 +227,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 }
             });
         });
-
-        // Add action buttons to apiary table
         apiaryActionsColumn.setCellFactory(col -> new TableCell<Apiary, Void>() {
             private final Button editButton = new Button("Edit");
             private final Button deleteButton = new Button("Delete");
@@ -272,10 +254,8 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             }
         });
 
-        // Hives table
         hiveIdColumn.setCellValueFactory(new PropertyValueFactory<>("hiveId"));
         hiveNumberColumn.setCellValueFactory(new PropertyValueFactory<>("hiveNumber"));
-
         hiveApiaryColumn.setCellValueFactory(cellData -> {
             Hive hive = cellData.getValue();
             return javafx.beans.binding.Bindings.createStringBinding(() -> {
@@ -284,7 +264,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         });
 
         hiveQueenYearColumn.setCellValueFactory(new PropertyValueFactory<>("queenYear"));
-
         hiveProductsCountColumn.setCellValueFactory(cellData -> {
             Hive hive = cellData.getValue();
             return javafx.beans.binding.Bindings.createObjectBinding(() -> {
@@ -296,7 +275,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             });
         });
 
-        // Add action buttons to hive table
         hiveActionsColumn.setCellFactory(col -> new TableCell<Hive, Void>() {
             private final Button editButton = new Button("Edit");
             private final Button deleteButton = new Button("Delete");
@@ -305,12 +283,10 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             {
                 editButton.getStyleClass().add("secondary-button");
                 deleteButton.getStyleClass().add("danger-button");
-
                 editButton.setOnAction(e -> {
                     Hive hive = getTableView().getItems().get(getIndex());
                     handleEditHive(hive);
                 });
-
                 deleteButton.setOnAction(e -> {
                     Hive hive = getTableView().getItems().get(getIndex());
                     handleDeleteHive(hive);
@@ -324,10 +300,8 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             }
         });
 
-        // Products table
         productIdColumn.setCellValueFactory(new PropertyValueFactory<>("productId"));
         productNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-
         productApiaryColumn.setCellValueFactory(cellData -> {
             HoneyProduct product = cellData.getValue();
             return javafx.beans.binding.Bindings.createStringBinding(() -> {
@@ -345,8 +319,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
         productPriceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
         productQuantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-
-        // Add action buttons to product table
         productActionsColumn.setCellFactory(col -> new TableCell<HoneyProduct, Void>() {
             private final Button editButton = new Button("Edit");
             private final Button deleteButton = new Button("Delete");
@@ -374,10 +346,8 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             }
         });
 
-        // Orders table
         orderIdColumn.setCellValueFactory(new PropertyValueFactory<>("orderId"));
         orderDateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
-
         orderCustomerColumn.setCellValueFactory(cellData -> {
             Order order = cellData.getValue();
             return javafx.beans.binding.Bindings.createStringBinding(() -> {
@@ -397,8 +367,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
         orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("total"));
         orderStatusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
-
-        // Add action buttons to order table
         orderActionsColumn.setCellFactory(col -> new TableCell<Order, Void>() {
             private final Button viewDetailsButton = new Button("View Details");
             private final HBox buttonBox = new HBox(5, viewDetailsButton);
@@ -421,13 +389,11 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     }
 
     private void setupComboBoxes() {
-        // Set converter for apiaryFilterComboBox to display apiary name
         apiaryFilterComboBox.setConverter(new javafx.util.StringConverter<Apiary>() {
             @Override
             public String toString(Apiary apiary) {
                 return apiary != null ? apiary.getName() : "";
             }
-
             @Override
             public Apiary fromString(String string) {
                 return apiaryFilterComboBox.getItems().stream()
@@ -435,8 +401,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         .findFirst().orElse(null);
             }
         });
-
-        // Set converter for productApiaryFilterComboBox
         productApiaryFilterComboBox.setConverter(new javafx.util.StringConverter<Apiary>() {
             @Override
             public String toString(Apiary apiary) {
@@ -450,8 +414,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         .findFirst().orElse(null);
             }
         });
-
-        // Set converter for productHiveFilterComboBox
         productHiveFilterComboBox.setConverter(new javafx.util.StringConverter<Hive>() {
             @Override
             public String toString(Hive hive) {
@@ -463,7 +425,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 if ("All Hives".equals(string)) {
                     return null;
                 }
-
                 String hiveNumberStr = string.replace("Hive #", "");
                 try {
                     int hiveNumber = Integer.parseInt(hiveNumberStr);
@@ -477,13 +438,10 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         });
     }
 
-    // Load data methods
     private void loadApiaries() {
         try {
             List<Apiary> beekeeperApiaries = apiaryService.findByBeekeeper(beekeeper);
             apiaries.setAll(beekeeperApiaries);
-
-            // Update apiary filter combo boxes
             apiaryFilterComboBox.getItems().setAll(beekeeperApiaries);
             productApiaryFilterComboBox.getItems().setAll(beekeeperApiaries);
 
@@ -534,13 +492,9 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     private void loadProductHiveFilter(Apiary apiary) {
         try {
             List<Hive> apiaryHives = hiveService.findByApiary(apiary);
-
-            // Add "All Hives" option
             productHiveFilterComboBox.getItems().clear();
             productHiveFilterComboBox.getItems().add(null); // Null represents "All Hives"
             productHiveFilterComboBox.getItems().addAll(apiaryHives);
-
-            // Select "All Hives" by default
             productHiveFilterComboBox.setValue(null);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading hive filter", e);
@@ -555,14 +509,11 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             List<HoneyProduct> filteredProducts;
             if (selectedApiary != null) {
                 if (selectedHive != null) {
-                    // Filter by apiary and hive
                     filteredProducts = honeyProductService.findByHive(selectedHive);
                 } else {
-                    // Filter by apiary only
                     filteredProducts = honeyProductService.findByApiary(selectedApiary);
                 }
             } else {
-                // No filters, load all products
                 filteredProducts = honeyProductService.findByBeekeeper(beekeeper);
             }
 
@@ -586,22 +537,17 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     private void loadOrders() {
         try {
             LOGGER.info("Loading orders for beekeeper: " + beekeeper.getUsername());
-
-            // Get filter values
             String statusFilter = orderStatusFilterComboBox.getValue();
             LocalDate startDate = orderStartDatePicker.getValue();
             LocalDate endDate = orderEndDatePicker.getValue();
 
             LOGGER.info("Order filters - Status: " + statusFilter + ", Start Date: " + startDate + ", End Date: " + endDate);
 
-            // Apply filters
             List<Order> filteredOrders;
             if ("All".equals(statusFilter) && startDate == null && endDate == null) {
-                // No filters, load all orders for this beekeeper's products
                 LOGGER.info("Loading all orders for beekeeper (no filters)");
                 filteredOrders = orderService.findOrdersForBeekeeper(beekeeper);
             } else {
-                // Apply filters
                 LOGGER.info("Loading orders with filters for beekeeper");
                 filteredOrders = orderService.findOrdersWithFilters(
                         beekeeper,
@@ -613,7 +559,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             LOGGER.info("Setting " + filteredOrders.size() + " orders in table");
             orders.setAll(filteredOrders);
 
-            // Log each order for debugging
             for (Order order : filteredOrders) {
                 LOGGER.info("Order in table: ID=" + order.getOrderId() +
                         ", Status=" + order.getStatus() +
@@ -628,7 +573,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         }
     }
 
-    // Navigation methods
     @FXML
     private void handleFilterOrders() {
         loadOrders();
@@ -988,12 +932,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                             LOGGER.log(Level.WARNING, "Error checking observer count before notification", e);
                         }
 
-                        // The service should automatically notify observers at this point
                         LOGGER.info("Service should have automatically notified observers");
-
-                        // Force log service instances to see current state
-                        ServiceFactory.logServiceInstances();
-
                         loadProductsByFilters();
                         showAlert(Alert.AlertType.INFORMATION, "Success",
                                 "Honey product created successfully. All clients should see this update immediately.");
@@ -1022,7 +961,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         LOGGER.info("=== VERIFYING BEEKEEPER OBSERVER REGISTRATION ===");
 
         try {
-            // Check HoneyProductService
             if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
                 org.apiary.utils.observer.EventManager<?> eventManager =
                         (org.apiary.utils.observer.EventManager<?>) honeyProductService;
@@ -1035,7 +973,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 }
             }
 
-            // Check OrderService
             if (orderService instanceof org.apiary.utils.observer.EventManager) {
                 org.apiary.utils.observer.EventManager<?> eventManager =
                         (org.apiary.utils.observer.EventManager<?>) orderService;
@@ -1048,7 +985,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 }
             }
 
-            // Check ApiaryService
             if (apiaryService instanceof org.apiary.utils.observer.EventManager) {
                 org.apiary.utils.observer.EventManager<?> eventManager =
                         (org.apiary.utils.observer.EventManager<?>) apiaryService;
@@ -1098,7 +1034,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                 try {
                     LOGGER.info("=== BEEKEEPER UPDATING PRODUCT ===");
                     LOGGER.info("Product ID: " + updatedProduct.getProductId());
-                    // NOW CORRECTLY SHOWS OLD vs NEW VALUES
                     LOGGER.info("Old Price: " + originalPrice + " -> New Price: " + updatedProduct.getPrice());
                     LOGGER.info("Old Quantity: " + originalQuantity + " -> New Quantity: " + updatedProduct.getQuantity());
 
@@ -1163,43 +1098,20 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     }
 
 
-    private void logObserverNotification(String action, HoneyProduct product) {
-        LOGGER.info("=== BEEKEEPER " + action.toUpperCase() + " NOTIFICATION ===");
-        LOGGER.info("Product: " + product.getName() + " | ID: " + product.getProductId());
-
-        // Check if services have observers registered
-        try {
-            if (honeyProductService instanceof org.apiary.utils.observer.EventManager) {
-                org.apiary.utils.observer.EventManager<?> eventManager =
-                        (org.apiary.utils.observer.EventManager<?>) honeyProductService;
-                LOGGER.info("HoneyProductService has " + eventManager.countObservers() + " observers to notify");
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error checking observer count", e);
-        }
-
-        LOGGER.info("=== " + action.toUpperCase() + " NOTIFICATION LOGGED ===");
-    }
-
     @FXML
     private void handleGenerateSalesReport() {
-        // Implementation for sales report generation
-        // This would populate the salesReportTable with data
         showAlert(Alert.AlertType.INFORMATION, "Feature Coming Soon",
                 "Sales report generation will be implemented in a future version.");
     }
 
     @FXML
     private void handleGenerateProductionReport() {
-        // Implementation for production report generation
-        // This would populate the productionReportTable with data
         showAlert(Alert.AlertType.INFORMATION, "Feature Coming Soon",
                 "Production report generation will be implemented in a future version.");
     }
 
     @FXML
     private void handleExportReport() {
-        // Implementation for exporting reports to Excel
         showAlert(Alert.AlertType.INFORMATION, "Feature Coming Soon",
                 "Report export functionality will be implemented in a future version.");
     }
@@ -1207,7 +1119,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     @FXML
     private void handleViewProfile() {
         try {
-            // Create dialog for profile view/edit
             Dialog<User> dialog = new Dialog<>();
             dialog.setTitle("My Profile");
             dialog.setHeaderText("View and Edit Profile");
@@ -1255,11 +1166,9 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
 
             dialog.getDialogPane().setContent(grid);
 
-            // Add buttons
             ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
             dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
 
-            // Convert result to user when save button is clicked
             dialog.setResultConverter(dialogButton -> {
                 if (dialogButton == saveButtonType) {
                     // Validate passwords if changing
@@ -1281,10 +1190,8 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         }
                     }
 
-                    // Update beekeeper info
                     beekeeper.setPhone(phoneField.getText());
                     beekeeper.setAddress(addressField.getText());
-
                     return beekeeper;
                 }
                 return null;
@@ -1293,7 +1200,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             Optional<User> result = dialog.showAndWait();
             result.ifPresent(updatedUser -> {
                 try {
-                    // Handle password change if needed
                     boolean passwordChanged = false;
                     if (!currentPasswordField.getText().isEmpty() &&
                             !newPasswordField.getText().isEmpty()) {
@@ -1310,9 +1216,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         }
                     }
 
-                    // Update profile
                     User savedUser = ServiceFactory.getUserService().updateProfile(updatedUser);
-
                     if (savedUser != null) {
                         showAlert(Alert.AlertType.INFORMATION, "Success",
                                 "Profile updated successfully." +
@@ -1335,22 +1239,16 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         }
     }
 
-    // File: src/main/java/org/apiary/controller/BeekeeperDashboardController.java
-// Replace the handleViewOrderDetails method
-
     private void handleViewOrderDetails(Order order) {
         try {
-            // Create a dialog to show order details
             Dialog<Void> dialog = new Dialog<>();
             dialog.setTitle("Order #" + order.getOrderId() + " Details");
             dialog.setHeaderText("Order Details");
 
-            // Create content
             VBox content = new VBox(10);
             content.setPadding(new Insets(20));
             content.setPrefWidth(600);
 
-            // Order info
             GridPane infoGrid = new GridPane();
             infoGrid.setHgap(10);
             infoGrid.setVgap(5);
@@ -1378,7 +1276,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             content.getChildren().add(infoGrid);
             content.getChildren().add(new Separator());
 
-            // Order items
             content.getChildren().add(new Label("Products:"));
 
             TableView<OrderItem> itemsTable = new TableView<>();
@@ -1425,13 +1322,11 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             itemsTable.getColumns().addAll(itemNameCol, itemApiaryCol, itemHiveCol,
                     itemPriceCol, itemQuantityCol, itemTotalCol);
 
-            // Load order items using service
             List<OrderItem> orderItems = orderService.getOrderItems(order.getOrderId());
             itemsTable.getItems().addAll(orderItems);
 
             content.getChildren().add(itemsTable);
 
-            // Total
             HBox totalBox = new HBox(10);
             totalBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
             totalBox.setPadding(new Insets(10, 0, 0, 0));
@@ -1440,7 +1335,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
             totalBox.getChildren().add(totalLabel);
             content.getChildren().add(totalBox);
 
-            // Add status change option for beekeepers (if needed)
             if ("PAID".equals(order.getStatus())) {
                 Separator separator = new Separator();
                 content.getChildren().add(separator);
@@ -1455,7 +1349,6 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                     LOGGER.info("Beekeeper " + beekeeper.getUsername() +
                             " marking order " + order.getOrderId() + " as DELIVERED");
 
-                    // Use the service which will automatically notify observers
                     boolean updated = orderService.updateOrderStatus(order.getOrderId(), "DELIVERED");
 
                     if (updated) {
@@ -1464,7 +1357,7 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                         showAlert(Alert.AlertType.INFORMATION, "Status Updated",
                                 "Order marked as delivered successfully. The customer has been notified.");
                         dialog.close();
-                        loadOrders(); // Refresh the orders table locally
+                        loadOrders();
                     } else {
                         LOGGER.warning("Failed to update order status to DELIVERED");
                         showAlert(Alert.AlertType.ERROR, "Error",

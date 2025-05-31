@@ -14,16 +14,12 @@ public class ServiceFactory {
     private static final Logger LOGGER = Logger.getLogger(ServiceFactory.class.getName());
     private static ApplicationContext applicationContext;
     private static AllServices allServices;
-
-    // Static initialization block to set up Spring context
     static {
         try {
             LOGGER.info("Initializing Spring ApplicationContext from XML...");
             applicationContext = new ClassPathXmlApplicationContext("ApiaryConfig.xml");
             allServices = applicationContext.getBean("allServices", AllServices.class);
             LOGGER.info("Spring ApplicationContext initialized successfully from XML");
-
-            // Log successful bean creation
             LOGGER.info("Successfully created " + applicationContext.getBeanDefinitionCount() + " beans");
             String[] beanNames = applicationContext.getBeanDefinitionNames();
             for (String beanName : beanNames) {
@@ -38,62 +34,8 @@ public class ServiceFactory {
     }
 
     private ServiceFactory() {
-        // Private constructor to prevent instantiation
     }
 
-    public static void logServiceInstances() {
-        Logger logger = Logger.getLogger(ServiceFactory.class.getName());
-
-        logger.info("=== SERVICE FACTORY INSTANCES (Spring XML DI) ===");
-        logger.info("HoneyProductService: " + getHoneyProductService().getClass().getSimpleName() + "@" +
-                Integer.toHexString(getHoneyProductService().hashCode()));
-        logger.info("OrderService: " + getOrderService().getClass().getSimpleName() + "@" +
-                Integer.toHexString(getOrderService().hashCode()));
-        logger.info("ApiaryService: " + getApiaryService().getClass().getSimpleName() + "@" +
-                Integer.toHexString(getApiaryService().hashCode()));
-
-        // Check observer counts with detailed logging
-        if (getHoneyProductService() instanceof org.apiary.utils.observer.EventManager) {
-            org.apiary.utils.observer.EventManager<?> eventManager =
-                    (org.apiary.utils.observer.EventManager<?>) getHoneyProductService();
-            int observerCount = eventManager.countObservers();
-            logger.info("HoneyProductService has " + observerCount + " observers");
-
-            if (observerCount == 0) {
-                logger.warning("WARNING: HoneyProductService has NO observers registered!");
-            } else if (observerCount == 1) {
-                logger.warning("WARNING: HoneyProductService has only 1 observer. Expected 2 (Client + Beekeeper)");
-            } else {
-                logger.info("GOOD: HoneyProductService has multiple observers registered");
-            }
-        }
-
-        if (getOrderService() instanceof org.apiary.utils.observer.EventManager) {
-            org.apiary.utils.observer.EventManager<?> eventManager =
-                    (org.apiary.utils.observer.EventManager<?>) getOrderService();
-            int observerCount = eventManager.countObservers();
-            logger.info("OrderService has " + observerCount + " observers");
-
-            if (observerCount == 0) {
-                logger.warning("WARNING: OrderService has NO observers registered!");
-            }
-        }
-
-        if (getApiaryService() instanceof org.apiary.utils.observer.EventManager) {
-            org.apiary.utils.observer.EventManager<?> eventManager =
-                    (org.apiary.utils.observer.EventManager<?>) getApiaryService();
-            int observerCount = eventManager.countObservers();
-            logger.info("ApiaryService has " + observerCount + " observers");
-
-            if (observerCount == 0) {
-                logger.warning("WARNING: ApiaryService has NO observers registered!");
-            }
-        }
-
-        logger.info("=== END SERVICE FACTORY INSTANCES ===");
-    }
-
-    // Service getter methods
     public static HoneyProductService getHoneyProductService() {
         if (allServices == null) {
             throw new RuntimeException("Spring context not initialized");

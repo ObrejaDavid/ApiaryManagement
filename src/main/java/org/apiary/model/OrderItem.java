@@ -27,7 +27,6 @@ public class OrderItem {
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    // Default constructor required by JPA
     public OrderItem() {}
 
     public OrderItem(Order order, HoneyProduct product, Integer quantity, BigDecimal price) {
@@ -37,7 +36,6 @@ public class OrderItem {
         this.price = price;
     }
 
-    // Getters and setters
     public Integer getOrderItemId() {
         return orderItemId;
     }

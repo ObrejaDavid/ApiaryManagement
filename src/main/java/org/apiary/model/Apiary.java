@@ -30,7 +30,6 @@ public class Apiary {
     @OneToMany(mappedBy = "apiary", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HoneyProduct> honeyProducts = new ArrayList<>();
 
-    // Default constructor required by JPA
     public Apiary() {}
 
     public Apiary(String name, String location, Beekeeper beekeeper) {
@@ -39,7 +38,6 @@ public class Apiary {
         this.beekeeper = beekeeper;
     }
 
-    // Getters and setters
     public Integer getApiaryId() {
         return apiaryId;
     }

@@ -66,16 +66,12 @@ public class CheckoutController {
 
         cartItems = FXCollections.observableArrayList();
         orderReviewTable.setItems(cartItems);
-
-        // Initialize expiry date dropdowns
         for (int i = 1; i <= 12; i++) {
             expiryMonthComboBox.getItems().add(String.format("%02d", i));
         }
         for (int i = 2025; i <= 2035; i++) {
             expiryYearComboBox.getItems().add(String.valueOf(i));
         }
-
-        // Set up table columns
         setupOrderReviewTable();
     }
 
@@ -103,8 +99,6 @@ public class CheckoutController {
 
     public void setClient(Client client) {
         this.client = client;
-
-        // Pre-fill shipping details if client has them
         if (client != null) {
             if (client.getFullName() != null) {
                 fullNameField.setText(client.getFullName());
@@ -122,7 +116,6 @@ public class CheckoutController {
     }
 
     public void initializeCheckout() {
-        // Load cart data and show first step
         loadCartItems();
         showStep(1);
     }
@@ -131,12 +124,8 @@ public class CheckoutController {
         try {
             List<CartItem> items = shoppingCartService.getCartItems(client);
             cartItems.setAll(items);
-
-            // Update subtotal
             BigDecimal subtotal = shoppingCartService.calculateCartTotal(client);
             subtotalLabel.setText(subtotal + " RON");
-
-            // Update summary labels
             summarySubtotalLabel.setText(subtotal + " RON");
             summaryShippingLabel.setText("0.00 RON"); // Free shipping for now
             summaryTotalLabel.setText(subtotal + " RON");
@@ -147,13 +136,11 @@ public class CheckoutController {
     }
 
     private void showStep(int step) {
-        // Hide all panes
         reviewOrderPane.setVisible(false);
         shippingDetailsPane.setVisible(false);
         paymentPane.setVisible(false);
         confirmationPane.setVisible(false);
 
-        // Show selected pane
         switch (step) {
             case 1:
                 reviewOrderPane.setVisible(true);
@@ -172,7 +159,6 @@ public class CheckoutController {
 
     @FXML
     private void handleBackToCart() {
-        // Close checkout window
         subtotalLabel.getScene().getWindow().hide();
     }
 
@@ -188,7 +174,6 @@ public class CheckoutController {
 
     @FXML
     private void handleContinueToPayment() {
-        // Validate shipping details
         if (validateShippingDetails()) {
             showStep(3);
         }
@@ -225,13 +210,10 @@ public class CheckoutController {
                 showAlert(Alert.AlertType.ERROR, "Empty Cart", "Your cart is empty.");
                 return;
             }
-
-            // Validate payment details
             if (!validatePaymentDetails()) {
                 return;
             }
 
-            // TEST DATABASE CONNECTION FIRST
             LOGGER.info("Testing database connection...");
             try {
                 SessionFactory sessionFactory = HibernateConfig.getSessionFactory();
@@ -250,8 +232,6 @@ public class CheckoutController {
             }
 
             LOGGER.info("Starting order placement for client: " + client.getUsername());
-
-            // Verify cart items are still available
             List<CartItem> currentCartItems = shoppingCartService.getCartItems(client);
             if (currentCartItems.isEmpty()) {
                 showAlert(Alert.AlertType.ERROR, "Cart Error",
@@ -260,15 +240,11 @@ public class CheckoutController {
             }
 
             LOGGER.info("Cart verification successful, proceeding with order creation and payment");
-
-            // Create order from cart - this will now automatically handle payment and set PAID status
             var order = orderService.createOrderFromCart(client);
             if (order != null) {
                 LOGGER.info("Order created and paid successfully with ID: " + order.getOrderId());
 
-                // Verify the order status is PAID
                 if ("PAID".equals(order.getStatus())) {
-                    // Show success message
                     orderNumberLabel.setText("Order #" + order.getOrderId());
                     confirmationTotalLabel.setText(order.getTotal() + " RON");
                     showStep(4);
@@ -325,7 +301,6 @@ public class CheckoutController {
 
     @FXML
     private void handleReturnToShop() {
-        // Close checkout window
         subtotalLabel.getScene().getWindow().hide();
     }
 

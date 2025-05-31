@@ -20,7 +20,6 @@ public class DatabaseProperties {
         return properties.getProperty(key, defaultValue);
     }
 
-    // Specific database properties
     public String getServerName() {
         return getProperty("db.server", "localhost");
     }

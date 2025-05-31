@@ -54,20 +54,13 @@ public class LoginController {
 
     @FXML
     private void initialize() {
-        // Initialize the service
         userService = ServiceFactory.getUserService();
-
-        // Set up button event handlers
         loginButton.setOnAction(event -> handleLogin());
         signupButton.setOnAction(event -> handleSignup());
-
-        // Hide/show beekeeper fields based on selection
         beekeeperRadioButton.selectedProperty().addListener((observable, oldValue, newValue) -> {
             yearsExperienceLabel.setVisible(newValue);
             yearsExperienceSpinner.setVisible(newValue);
         });
-
-        // Default to Client radio button selected
         clientRadioButton.setSelected(true);
     }
 
@@ -78,7 +71,6 @@ public class LoginController {
             LOGGER.info("Dashboard closed. Open dashboards: " + openDashboards.size());
         });
     }
-
     @FXML
     private void toggleForms() {
         // Toggle between login and signup forms
@@ -87,8 +79,6 @@ public class LoginController {
         loginForm.setManaged(!loginVisible);
         signupForm.setVisible(loginVisible);
         signupForm.setManaged(loginVisible);
-
-        // Clear input fields
         if (loginVisible) {
             clearSignupFields();
         } else {
@@ -116,8 +106,6 @@ public class LoginController {
     private void handleLogin() {
         String username = loginUsername.getText().trim();
         String password = loginPassword.getText().trim();
-
-        // Validate input
         if (StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
             showAlert(Alert.AlertType.ERROR, "Login Error",
                     "Please enter both username and password.");
@@ -125,15 +113,10 @@ public class LoginController {
         }
 
         try {
-            // Attempt authentication
             if (userService.authenticate(username, password)) {
-                // Get the user
                 Optional<User> userOpt = userService.findByUsername(username);
-
                 if (userOpt.isPresent()) {
                     User user = userOpt.get();
-
-                    // Determine type and open appropriate dashboard
                     if (user instanceof Beekeeper) {
                         openBeekeeperDashboard((Beekeeper) user);
                     } else if (user instanceof Client) {
@@ -151,9 +134,7 @@ public class LoginController {
         }
     }
 
-    // File: src/main/java/org/apiary/controller/LoginController.java
     private void handleSignup() {
-        // Get form data
         String username = signupUsername.getText().trim();
         String password = signupPassword.getText().trim();
         String confirmPassword = signupConfirmPassword.getText().trim();
@@ -164,7 +145,6 @@ public class LoginController {
         boolean isBeekeeper = beekeeperRadioButton.isSelected();
         Integer yearsExperience = isBeekeeper ? yearsExperienceSpinner.getValue() : null;
 
-        // Validate input
         if (StringUtils.isBlank(username)) {
             showAlert(Alert.AlertType.ERROR, "Registration Error", "Username is required.");
             signupUsername.requestFocus();
@@ -217,45 +197,30 @@ public class LoginController {
         }
 
         try {
-            // Register user based on account type
             User registeredUser = null;
-
             if (isBeekeeper) {
                 Beekeeper beekeeper = userService.registerBeekeeper(username, password, phone, address, yearsExperience);
                 registeredUser = beekeeper;
-
                 if (beekeeper != null) {
                     showAlert(Alert.AlertType.INFORMATION, "Registration Successful",
                             "Beekeeper account created successfully! Opening dashboard...");
-
-                    // Open dashboard in separate window
                     openBeekeeperDashboard(beekeeper);
-
-                    // Switch back to login form for potential additional logins
                     toggleForms();
                 }
             } else {
                 Client client = userService.registerClient(username, password, fullName, email, address, phone);
                 registeredUser = client;
-
                 if (client != null) {
                     showAlert(Alert.AlertType.INFORMATION, "Registration Successful",
                             "Client account created successfully! Opening dashboard...");
-
-                    // Open dashboard in separate window
                     openClientDashboard(client);
-
-                    // Switch back to login form for potential additional logins
                     toggleForms();
                 }
             }
-
             if (registeredUser == null) {
                 showAlert(Alert.AlertType.ERROR, "Registration Error", "Failed to create account. Please try again.");
             }
-
         } catch (IllegalArgumentException e) {
-            // Validation errors from service
             showAlert(Alert.AlertType.ERROR, "Registration Error", e.getMessage());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error during registration", e);
@@ -264,89 +229,38 @@ public class LoginController {
         }
     }
 
-    @FXML
-    private void handleOpenTestClient() {
-        try {
-            // Create a test client
-            Client testClient = new Client("testclient", "hashedpassword");
-            testClient.setUserId(999); // Test ID
-            testClient.setFullName("Test Client");
-            testClient.setEmail("test@client.com");
-
-            LOGGER.info("Opening test client dashboard");
-            openClientDashboard(testClient);
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error opening test client", e);
-            showAlert(Alert.AlertType.ERROR, "Error", "Could not open test client: " + e.getMessage());
-        }
-    }
-
-    @FXML
-    private void handleOpenTestBeekeeper() {
-        try {
-            // Create a test beekeeper
-            Beekeeper testBeekeeper = new Beekeeper("testbeekeeper", "hashedpassword");
-            testBeekeeper.setUserId(998); // Test ID
-            testBeekeeper.setPhone("123-456-7890");
-            testBeekeeper.setAddress("Test Address");
-
-            LOGGER.info("Opening test beekeeper dashboard");
-            openBeekeeperDashboard(testBeekeeper);
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error opening test beekeeper", e);
-            showAlert(Alert.AlertType.ERROR, "Error", "Could not open test beekeeper: " + e.getMessage());
-        }
-    }
-
     private void openClientDashboard(Client client) {
         try {
             LOGGER.info("=== OPENING CLIENT DASHBOARD ===");
-
-            // Load the client dashboard
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/clientDashboard.fxml"));
             Parent root = loader.load();
 
-            // Get controller
             ClientDashboardController controller = loader.getController();
             LOGGER.info("Controller obtained: " + controller.getClass().getSimpleName() + "@" +
                     Integer.toHexString(controller.hashCode()));
 
-            // CREATE SEPARATE WINDOW instead of replacing login window
             Stage clientStage = new Stage();
             clientStage.setScene(new Scene(root));
             clientStage.setTitle("Client Dashboard - " + client.getUsername() + " - Apiary Management System");
 
-            // CRITICAL: Store controller reference to prevent GC
             clientStage.setUserData(controller);
-
-            // Set up cleanup on window close
             clientStage.setOnCloseRequest(e -> {
                 LOGGER.info("Client window closing, cleaning up observers...");
                 controller.cleanup();
             });
 
             trackDashboard(clientStage);
-
-            // Show window first
             clientStage.show();
-
-            // THEN set client with proper delay
             Platform.runLater(() -> {
                 try {
                     LOGGER.info("=== DELAYED CLIENT SETUP STARTING ===");
-                    Thread.sleep(500); // Match BeekeeperDashboard timing
-
-                    // Set client
+                    Thread.sleep(500);
                     controller.setClient(client);
 
-                    // Force verification of observer registration
                     Platform.runLater(() -> {
                         try {
-                            Thread.sleep(1000); // Additional delay for verification
+                            Thread.sleep(1000);
                             controller.verifyAndForceObserverRegistration();
-                            ServiceFactory.logServiceInstances();
                         } catch (Exception e) {
                             LOGGER.log(Level.WARNING, "Error in delayed verification", e);
                         }
@@ -358,7 +272,6 @@ public class LoginController {
                 }
             });
 
-            // Clear login form and show success message instead of closing window
             clearLoginFields();
             showAlert(Alert.AlertType.INFORMATION, "Login Successful",
                     "Client dashboard opened successfully. You can now login as another user if needed.");
@@ -374,39 +287,25 @@ public class LoginController {
 
     private void openBeekeeperDashboard(Beekeeper beekeeper) {
         try {
-            // Load the beekeeper dashboard
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/beekeeperDashboard.fxml"));
             Parent root = loader.load();
-
-            // Get controller and set beekeeper
             BeekeeperDashboardController controller = loader.getController();
 
-            // CREATE SEPARATE WINDOW instead of replacing login window
             Stage beekeeperStage = new Stage();
             beekeeperStage.setScene(new Scene(root));
             beekeeperStage.setTitle("Beekeeper Dashboard - " + beekeeper.getUsername() + " - Apiary Management System");
 
-            // Store controller reference to prevent GC
             beekeeperStage.setUserData(controller);
-
-            // Set up cleanup on window close
             beekeeperStage.setOnCloseRequest(e -> {
                 LOGGER.info("Beekeeper window closing, cleaning up observers...");
-                // Note: BeekeeperDashboardController doesn't have cleanup method yet,
-                // but we can add it if needed
             });
 
             trackDashboard(beekeeperStage);
-            // Show the window
             beekeeperStage.show();
-
-            // ADD DELAY TO ENSURE PROPER INITIALIZATION
             Platform.runLater(() -> {
                 try {
-                    Thread.sleep(500); // Give time for initialization
+                    Thread.sleep(500);
                     controller.setBeekeeper(beekeeper);
-
-                    // Log final observer count after beekeeper is set
                     if (ServiceFactory.getHoneyProductService() instanceof org.apiary.utils.observer.EventManager) {
                         org.apiary.utils.observer.EventManager<?> eventManager =
                                 (org.apiary.utils.observer.EventManager<?>) ServiceFactory.getHoneyProductService();
@@ -417,13 +316,9 @@ public class LoginController {
                     LOGGER.log(Level.WARNING, "Error in delayed beekeeper setup", e);
                 }
             });
-
-            // Clear login form and show success message instead of closing window
             clearLoginFields();
             showAlert(Alert.AlertType.INFORMATION, "Login Successful",
                     "Beekeeper dashboard opened successfully. You can now login as another user if needed.");
-
-            // Log the registration for debugging
             LOGGER.info("Opened Beekeeper Dashboard in separate window, login window remains open");
 
         } catch (IOException e) {

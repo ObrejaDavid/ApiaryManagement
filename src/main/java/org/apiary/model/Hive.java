@@ -27,7 +27,6 @@ public class Hive {
     @OneToMany(mappedBy = "hive", cascade = CascadeType.ALL)
     private List<HoneyProduct> honeyProducts = new ArrayList<>();
 
-    // Default constructor required by JPA
     public Hive() {}
 
     public Hive(Integer hiveNumber, Integer queenYear, Apiary apiary) {
@@ -35,8 +34,6 @@ public class Hive {
         this.queenYear = queenYear;
         this.apiary = apiary;
     }
-
-    // Getters and setters
     public Integer getHiveId() {
         return hiveId;
     }

@@ -28,14 +28,12 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
     @Override
     public Hive createHive(Integer hiveNumber, Integer queenYear, Apiary apiary, Beekeeper beekeeper) {
         try {
-            // Check if apiary belongs to beekeeper
             if (!apiaryService.isApiaryOwnedByBeekeeper(beekeeper, apiary.getApiaryId())) {
                 LOGGER.warning("Apiary does not belong to beekeeper: " +
                         apiary.getApiaryId() + ", " + beekeeper.getUsername());
                 return null;
             }
 
-            // Check if hive number already exists in apiary
             List<Hive> existingHives = findByApiaryAndHiveNumber(apiary, hiveNumber);
             if (!existingHives.isEmpty()) {
                 LOGGER.warning("Hive number already exists in apiary: " +
@@ -46,7 +44,6 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
             Hive hive = new Hive(hiveNumber, queenYear, apiary);
             Hive savedHive = hiveRepository.save(hive);
 
-            // Notify observers
             notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.CREATED, savedHive));
 
             LOGGER.info("Created new hive: " + hiveNumber + " in apiary: " + apiary.getName());
@@ -70,14 +67,12 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
             Hive oldHive = new Hive(hive.getHiveNumber(), hive.getQueenYear(), hive.getApiary());
             oldHive.setHiveId(hive.getHiveId());
 
-            // Check if hive belongs to beekeeper
             if (!isHiveOwnedByBeekeeper(hiveId, beekeeper)) {
                 LOGGER.warning("Hive does not belong to beekeeper: " +
                         hiveId + ", " + beekeeper.getUsername());
                 return null;
             }
 
-            // Check if new hive number already exists in apiary
             if (!hive.getHiveNumber().equals(hiveNumber)) {
                 List<Hive> existingHives = findByApiaryAndHiveNumber(hive.getApiary(), hiveNumber);
                 if (!existingHives.isEmpty()) {
@@ -92,7 +87,6 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
 
             Hive updatedHive = hiveRepository.save(hive);
 
-            // Notify observers
             notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.UPDATED, updatedHive, oldHive));
 
             LOGGER.info("Updated hive: " + hiveId);
@@ -114,7 +108,6 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
 
             Hive hive = hiveOpt.get();
 
-            // Check if hive belongs to beekeeper
             if (!isHiveOwnedByBeekeeper(hiveId, beekeeper)) {
                 LOGGER.warning("Hive does not belong to beekeeper: " +
                         hiveId + ", " + beekeeper.getUsername());
@@ -123,7 +116,6 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
 
             hiveRepository.deleteById(hiveId);
 
-            // Notify observers
             notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, hive));
 
             LOGGER.info("Deleted hive: " + hiveId);
@@ -134,7 +126,6 @@ public class HiveServiceImpl extends EventManager<EntityChangeEvent<?>> implemen
         }
     }
 
-    // ... rest of the methods remain the same (findById, findByApiary, etc.)
     @Override
     public Optional<Hive> findById(Integer hiveId) {
         try {

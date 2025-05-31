@@ -100,30 +100,22 @@ public class HoneyProductServiceImpl extends EventManager<EntityChangeEvent<?>> 
             oldProduct.setProductId(product.getProductId());
             oldProduct.setHive(product.getHive());
 
-            // Check if product belongs to beekeeper
             if (!isProductOwnedByBeekeeper(productId, beekeeper)) {
                 LOGGER.warning("Honey product does not belong to beekeeper: " +
                         productId + ", " + beekeeper.getUsername());
                 return null;
             }
 
-            // Update product fields
             product.setName(name);
             product.setDescription(description);
             product.setPrice(price);
             product.setQuantity(quantity);
-
             HoneyProduct updatedProduct = honeyProductRepository.save(product);
 
-            // ENHANCED OBSERVER DEBUGGING
             LOGGER.info("=== ABOUT TO NOTIFY OBSERVERS ===");
             LOGGER.info("Current observer count: " + countObservers());
             LOGGER.info("Has observers: " + hasObservers());
 
-            // Log each observer specifically
-            logObserverDetails();
-
-            // Verify service instance
             LOGGER.info("This HoneyProductService instance: " + this.getClass().getSimpleName() + "@" +
                     Integer.toHexString(this.hashCode()));
 

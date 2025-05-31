@@ -37,13 +37,9 @@ public class HoneyProductDialogController {
     private void initialize() {
         apiaryService = ServiceFactory.getApiaryService();
         hiveService = ServiceFactory.getHiveService();
-
-        // Set up honey types
         honeyTypeComboBox.getItems().addAll(
                 "Floral", "Forest", "Acacia", "Linden", "Polyfloral", "Organic"
         );
-
-        // Set up converters
         apiaryComboBox.setConverter(new javafx.util.StringConverter<Apiary>() {
             @Override
             public String toString(Apiary apiary) {
@@ -78,8 +74,6 @@ public class HoneyProductDialogController {
                 }
             }
         });
-
-        // Set up apiary change listener to load hives
         apiaryComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 loadHives(newVal);
@@ -140,13 +134,11 @@ public class HoneyProductDialogController {
         String quantityText = quantityField.getText().trim();
         String description = descriptionField.getText().trim();
 
-        // Validate required fields
         if (StringUtils.isBlank(name) || selectedApiary == null ||
                 StringUtils.isBlank(priceText) || StringUtils.isBlank(quantityText)) {
             return null;
         }
 
-        // Validate price and quantity
         if (!ValidationUtils.isPositiveNumeric(priceText) || !ValidationUtils.isPositiveNumeric(quantityText)) {
             return null;
         }

@@ -31,7 +31,6 @@ public class ApiaryDialogController {
         if (apiary != null) {
             apiaryNameField.setText(apiary.getName());
             apiaryLocationField.setText(apiary.getLocation());
-            // Note: Apiary doesn't have description field in the model, so we skip this
         }
     }
 
@@ -42,7 +41,6 @@ public class ApiaryDialogController {
         if (StringUtils.isBlank(name) || StringUtils.isBlank(location)) {
             return null;
         }
-
         if (isEdit) {
             apiary.setName(name);
             apiary.setLocation(location);

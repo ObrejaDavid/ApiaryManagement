@@ -18,10 +18,8 @@ public class HibernateConfig {
                 Configuration configuration = new Configuration();
                 Properties settings = new Properties();
 
-                // Database connection settings
                 settings.put(Environment.DRIVER, "com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
-                // Use system properties or fallback to defaults
                 String serverName = System.getProperty("db.server", "localhost");
                 String port = System.getProperty("db.port", "1433");
                 String databaseName = System.getProperty("db.name", "apiary");

@@ -29,10 +29,8 @@ public class HiveDialogController {
     private void initialize() {
         apiaryService = ServiceFactory.getApiaryService();
 
-        // Set current year as default for queen year
         queenYearSpinner.getValueFactory().setValue(LocalDate.now().getYear());
 
-        // Set converter for apiary combo box
         apiaryComboBox.setConverter(new javafx.util.StringConverter<Apiary>() {
             @Override
             public String toString(Apiary apiary) {
