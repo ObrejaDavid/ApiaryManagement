@@ -1566,15 +1566,25 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
     @FXML
     private void handleLogout() {
         try {
-            // Navigate back to login screen
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/login.fxml"));
-            Parent root = loader.load();
+            // Confirm logout
+            Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmDialog.setTitle("Logout");
+            confirmDialog.setHeaderText("Confirm Logout");
+            confirmDialog.setContentText("Are you sure you want to logout?");
 
-            Stage stage = (Stage) welcomeLabel.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Login - Apiary Management System");
-            stage.show();
-        } catch (IOException e) {
+            Optional<ButtonType> result = confirmDialog.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                // Cleanup observers
+                cleanup();
+
+                // Close only this dashboard window (login window remains open)
+                Stage stage = (Stage) welcomeLabel.getScene().getWindow();
+                stage.close();
+
+                showAlert(Alert.AlertType.INFORMATION, "Logged Out",
+                        "You have been logged out. The login window is still available for new logins.");
+            }
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error during logout", e);
             showAlert(Alert.AlertType.ERROR, "Logout Error",
                     "An error occurred during logout: " + e.getMessage());

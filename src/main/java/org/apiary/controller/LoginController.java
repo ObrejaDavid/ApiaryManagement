@@ -17,7 +17,9 @@ import org.apiary.utils.StringUtils;
 import org.apiary.utils.ValidationUtils;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,6 +48,8 @@ public class LoginController {
     @FXML private Button loginButton;
     @FXML private Button signupButton;
 
+    private static final Set<Stage> openDashboards = new HashSet<>();
+
     private UserService userService;
 
     @FXML
@@ -65,6 +69,14 @@ public class LoginController {
 
         // Default to Client radio button selected
         clientRadioButton.setSelected(true);
+    }
+
+    private void trackDashboard(Stage stage) {
+        openDashboards.add(stage);
+        stage.setOnCloseRequest(e -> {
+            openDashboards.remove(stage);
+            LOGGER.info("Dashboard closed. Open dashboards: " + openDashboards.size());
+        });
     }
 
     @FXML
@@ -140,8 +152,6 @@ public class LoginController {
     }
 
     // File: src/main/java/org/apiary/controller/LoginController.java
-// Function: handleSignup() method (replace the existing method)
-
     private void handleSignup() {
         // Get form data
         String username = signupUsername.getText().trim();
@@ -216,14 +226,13 @@ public class LoginController {
 
                 if (beekeeper != null) {
                     showAlert(Alert.AlertType.INFORMATION, "Registration Successful",
-                            "Beekeeper account created successfully! Logging you in...");
+                            "Beekeeper account created successfully! Opening dashboard...");
 
-                    if (userService.authenticate(username, password)) {
-                        openBeekeeperDashboard(beekeeper);
-                    } else {
-                        LOGGER.log(Level.WARNING, "Auto-login failed after successful registration for beekeeper: " + username);
-                        toggleForms(); // Fall back to manual login
-                    }
+                    // Open dashboard in separate window
+                    openBeekeeperDashboard(beekeeper);
+
+                    // Switch back to login form for potential additional logins
+                    toggleForms();
                 }
             } else {
                 Client client = userService.registerClient(username, password, fullName, email, address, phone);
@@ -231,14 +240,13 @@ public class LoginController {
 
                 if (client != null) {
                     showAlert(Alert.AlertType.INFORMATION, "Registration Successful",
-                            "Client account created successfully! Logging you in...");
+                            "Client account created successfully! Opening dashboard...");
 
-                    if (userService.authenticate(username, password)) {
-                        openClientDashboard(client);
-                    } else {
-                        LOGGER.log(Level.WARNING, "Auto-login failed after successful registration for client: " + username);
-                        toggleForms(); // Fall back to manual login
-                    }
+                    // Open dashboard in separate window
+                    openClientDashboard(client);
+
+                    // Switch back to login form for potential additional logins
+                    toggleForms();
                 }
             }
 
@@ -305,10 +313,10 @@ public class LoginController {
             LOGGER.info("Controller obtained: " + controller.getClass().getSimpleName() + "@" +
                     Integer.toHexString(controller.hashCode()));
 
-            // CREATE STAGE AND STORE CONTROLLER REFERENCE IMMEDIATELY
+            // CREATE SEPARATE WINDOW instead of replacing login window
             Stage clientStage = new Stage();
             clientStage.setScene(new Scene(root));
-            clientStage.setTitle("Client Dashboard - Apiary Management System");
+            clientStage.setTitle("Client Dashboard - " + client.getUsername() + " - Apiary Management System");
 
             // CRITICAL: Store controller reference to prevent GC
             clientStage.setUserData(controller);
@@ -319,10 +327,12 @@ public class LoginController {
                 controller.cleanup();
             });
 
+            trackDashboard(clientStage);
+
             // Show window first
             clientStage.show();
 
-            // THEN set client with proper delay like BeekeeperDashboard
+            // THEN set client with proper delay
             Platform.runLater(() -> {
                 try {
                     LOGGER.info("=== DELAYED CLIENT SETUP STARTING ===");
@@ -348,9 +358,10 @@ public class LoginController {
                 }
             });
 
-            // Close login window
-            Stage loginStage = (Stage) loginButton.getScene().getWindow();
-            loginStage.close();
+            // Clear login form and show success message instead of closing window
+            clearLoginFields();
+            showAlert(Alert.AlertType.INFORMATION, "Login Successful",
+                    "Client dashboard opened successfully. You can now login as another user if needed.");
 
             LOGGER.info("=== CLIENT DASHBOARD WINDOW OPENED ===");
 
@@ -370,6 +381,25 @@ public class LoginController {
             // Get controller and set beekeeper
             BeekeeperDashboardController controller = loader.getController();
 
+            // CREATE SEPARATE WINDOW instead of replacing login window
+            Stage beekeeperStage = new Stage();
+            beekeeperStage.setScene(new Scene(root));
+            beekeeperStage.setTitle("Beekeeper Dashboard - " + beekeeper.getUsername() + " - Apiary Management System");
+
+            // Store controller reference to prevent GC
+            beekeeperStage.setUserData(controller);
+
+            // Set up cleanup on window close
+            beekeeperStage.setOnCloseRequest(e -> {
+                LOGGER.info("Beekeeper window closing, cleaning up observers...");
+                // Note: BeekeeperDashboardController doesn't have cleanup method yet,
+                // but we can add it if needed
+            });
+
+            trackDashboard(beekeeperStage);
+            // Show the window
+            beekeeperStage.show();
+
             // ADD DELAY TO ENSURE PROPER INITIALIZATION
             Platform.runLater(() -> {
                 try {
@@ -388,18 +418,13 @@ public class LoginController {
                 }
             });
 
-            // CREATE NEW WINDOW instead of replacing current scene
-            Stage beekeeperStage = new Stage();
-            beekeeperStage.setScene(new Scene(root));
-            beekeeperStage.setTitle("Beekeeper Dashboard - Apiary Management System");
-            beekeeperStage.show();
-
-            // Close the login window
-            Stage loginStage = (Stage) loginButton.getScene().getWindow();
-            loginStage.close();
+            // Clear login form and show success message instead of closing window
+            clearLoginFields();
+            showAlert(Alert.AlertType.INFORMATION, "Login Successful",
+                    "Beekeeper dashboard opened successfully. You can now login as another user if needed.");
 
             // Log the registration for debugging
-            LOGGER.info("Opened Beekeeper Dashboard in new window and closed login window");
+            LOGGER.info("Opened Beekeeper Dashboard in separate window, login window remains open");
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error opening beekeeper dashboard", e);

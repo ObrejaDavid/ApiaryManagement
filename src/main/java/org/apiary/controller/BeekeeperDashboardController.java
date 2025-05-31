@@ -1497,21 +1497,16 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         Optional<ButtonType> result = confirmDialog.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
-                // Close current window
+                // Close only this dashboard window (login window remains open)
                 Stage stage = (Stage) welcomeLabel.getScene().getWindow();
                 stage.close();
 
-                // Open login window
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/login.fxml"));
-                Parent root = loader.load();
-                Stage loginStage = new Stage();
-                loginStage.setTitle("Apiary Management System - Login");
-                loginStage.setScene(new Scene(root));
-                loginStage.show();
-            } catch (IOException e) {
+                showAlert(Alert.AlertType.INFORMATION, "Logged Out",
+                        "You have been logged out. The login window is still available for new logins.");
+            } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error logging out", e);
                 showAlert(Alert.AlertType.ERROR, "Error",
-                        "Could not return to login screen: " + e.getMessage());
+                        "Could not logout properly: " + e.getMessage());
             }
         }
     }
