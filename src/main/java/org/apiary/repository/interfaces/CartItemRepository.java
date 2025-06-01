@@ -28,4 +28,11 @@ public interface CartItemRepository extends Repository<Integer, CartItem> {
      * @param cart The shopping cart
      */
     void deleteByCart(ShoppingCart cart);
+
+    /**
+     * Find all cart items for a specific product
+     * @param product The product
+     * @return A list of cart items for the product
+     */
+    List<CartItem> findByProduct(HoneyProduct product);
 }

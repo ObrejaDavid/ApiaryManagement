@@ -717,13 +717,12 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                     "This will permanently delete:\n" +
                     "• The apiary: " + apiary.getName() + "\n" +
                     "• " + hiveCount + " hive(s)\n" +
-                    "• " + productCount + " honey product(s)\n\n" +
+                    "• " + productCount + " honey product(s)\n" +
+                    "• All shopping cart items containing these products\n" +
+                    "• All order items referencing these products\n\n" +
                     "This action cannot be undone.";
             confirmDialog.setContentText(message);
-
-            // Make the dialog larger to show all text
-            confirmDialog.getDialogPane().setPrefSize(400, 250);
-
+            confirmDialog.getDialogPane().setPrefSize(500, 300);
             Optional<ButtonType> result = confirmDialog.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
                 LOGGER.info("=== STARTING APIARY CASCADE DELETION ===");
@@ -736,9 +735,8 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
                     LOGGER.info("=== APIARY CASCADE DELETION SUCCESSFUL ===");
                     showAlert(Alert.AlertType.INFORMATION, "Deletion Successful",
                             "Apiary '" + apiary.getName() + "' and all related data have been deleted successfully.\n" +
-                                    "All dashboards will be updated automatically.");
-
-                    // The observer pattern will handle the UI updates automatically
+                                    "All dashboards will be updated automatically.\n" +
+                                    "Any orders containing these products have had those items removed.");
                 } else {
                     LOGGER.warning("Apiary deletion failed");
                     showAlert(Alert.AlertType.ERROR, "Deletion Failed",

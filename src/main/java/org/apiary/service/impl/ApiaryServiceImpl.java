@@ -1,11 +1,10 @@
 package org.apiary.service.impl;
 
-import org.apiary.model.Apiary;
-import org.apiary.model.Beekeeper;
-import org.apiary.model.Hive;
-import org.apiary.model.HoneyProduct;
+import org.apiary.model.*;
 import org.apiary.repository.interfaces.ApiaryRepository;
+import org.apiary.repository.interfaces.CartItemRepository;
 import org.apiary.repository.interfaces.HoneyProductRepository;
+import org.apiary.repository.interfaces.OrderItemRepository;
 import org.apiary.service.interfaces.ApiaryService;
 import org.apiary.utils.events.EntityChangeEvent;
 import org.apiary.utils.observer.EventManager;
@@ -21,10 +20,17 @@ public class ApiaryServiceImpl extends EventManager<EntityChangeEvent<?>> implem
     private static final Logger LOGGER = Logger.getLogger(ApiaryServiceImpl.class.getName());
     private final ApiaryRepository apiaryRepository;
     private final HoneyProductRepository honeyProductRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final CartItemRepository cartItemRepository;
 
-    public ApiaryServiceImpl(ApiaryRepository apiaryRepository, HoneyProductRepository honeyProductRepository) {
+    public ApiaryServiceImpl(ApiaryRepository apiaryRepository,
+                             HoneyProductRepository honeyProductRepository,
+                             OrderItemRepository orderItemRepository,
+                             CartItemRepository cartItemRepository) {
         this.apiaryRepository = apiaryRepository;
         this.honeyProductRepository = honeyProductRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.cartItemRepository = cartItemRepository;
     }
 
     @Override
@@ -88,35 +94,39 @@ public class ApiaryServiceImpl extends EventManager<EntityChangeEvent<?>> implem
                 LOGGER.warning("Apiary not found: " + apiaryId);
                 return false;
             }
-
             Apiary apiary = apiaryOpt.get();
-
             List<Hive> hivesToDelete = apiaryRepository.findHivesByApiary(apiary);
             List<HoneyProduct> productsToDelete = honeyProductRepository.findByApiary(apiary);
 
             LOGGER.info("Deleting apiary " + apiaryId + " with " + hivesToDelete.size() +
                     " hives and " + productsToDelete.size() + " products");
+            for (HoneyProduct product : productsToDelete) {
+                try {
+                    List<CartItem> cartItems = cartItemRepository.findByProduct(product);
+                    for (CartItem cartItem : cartItems) {
+                        cartItemRepository.delete(cartItem);
+                        LOGGER.info("Deleted CartItem ID: " + cartItem.getItemId() + " for product: " + product.getName());
+                    }
+                    List<OrderItem> orderItems = orderItemRepository.findByProduct(product);
+                    for (OrderItem orderItem : orderItems) {
+                        orderItemRepository.delete(orderItem);
+                        LOGGER.info("Deleted OrderItem ID: " + orderItem.getOrderItemId() + " for product: " + product.getName());
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error deleting references for product: " + product.getName(), e);
+                }
+            }
 
-            // Delete the apiary (cascade will handle related entities)
             apiaryRepository.deleteById(apiaryId);
-
-            // Notify observers about all deletions
-            // First notify about product deletions
             for (HoneyProduct product : productsToDelete) {
                 LOGGER.info("Notifying observers about cascade-deleted product: " + product.getName());
                 notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, product));
             }
-
-            // Then notify about hive deletions
             for (Hive hive : hivesToDelete) {
                 LOGGER.info("Notifying observers about cascade-deleted hive: " + hive.getHiveNumber());
-                // Note: We need to access hiveService through a different approach since we can't inject it here
-                // The hive deletions will be handled by the apiary deletion notification
+                notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, hive));
             }
-
-            // Finally notify about apiary deletion
             notifyObservers(new EntityChangeEvent<>(EntityChangeEvent.Type.DELETED, apiary));
-
             LOGGER.info("Successfully deleted apiary: " + apiaryId + " and all related entities");
             return true;
         } catch (Exception e) {

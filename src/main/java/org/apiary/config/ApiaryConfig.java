@@ -79,8 +79,12 @@ public class ApiaryConfig {
     }
 
     @Bean
-    public ApiaryService apiaryService(ApiaryRepository apiaryRepository, HoneyProductRepository honeyProductRepository) {
-        return new ApiaryServiceImpl(apiaryRepository, honeyProductRepository);
+    public ApiaryService apiaryService(ApiaryRepository apiaryRepository,
+                                       HoneyProductRepository honeyProductRepository,
+                                       OrderItemRepository orderItemRepository,
+                                       CartItemRepository cartItemRepository) {
+        return new ApiaryServiceImpl(apiaryRepository, honeyProductRepository,
+                orderItemRepository, cartItemRepository);
     }
 
     @Bean

@@ -69,4 +69,18 @@ public class CartItemRepositoryImpl extends AbstractRepository<Integer, CartItem
             LOGGER.log(Level.SEVERE, "Error deleting cart items by cart: " + cart.getCartId(), e);
         }
     }
+
+    @Override
+    public List<CartItem> findByProduct(HoneyProduct product) {
+        try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            Query<CartItem> query = session.createQuery(
+                    "FROM CartItem WHERE product.id = :productId", CartItem.class);
+            query.setParameter("productId", product.getProductId());
+            return query.getResultList();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding cart items by product: " + product.getProductId(), e);
+            return List.of();
+        }
+    }
+
 }
