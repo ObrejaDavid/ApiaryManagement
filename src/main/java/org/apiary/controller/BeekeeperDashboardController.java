@@ -1425,9 +1425,12 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
         switch (event.getEntityType()) {
             case "Apiary":
                 loadApiaries();
+                loadHives();
+                loadProducts();
                 break;
             case "Hive":
                 loadHives();
+                loadProducts();
                 break;
             case "HoneyProduct":
                 loadProducts();
