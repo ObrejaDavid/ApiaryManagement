@@ -1,5 +1,7 @@
 package org.apiary.controller;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -15,6 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.apiary.model.*;
 import org.apiary.service.ServiceFactory;
 import org.apiary.service.interfaces.ApiaryService;
@@ -702,30 +705,50 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     }
 
     private void handleDeleteApiary(Apiary apiary) {
-        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmDialog.setTitle("Delete Apiary");
-        confirmDialog.setHeaderText("Delete " + apiary.getName());
-        confirmDialog.setContentText("Are you sure you want to delete this apiary? " +
-                "This will also delete all associated hives and products.");
+        try {
+            long hiveCount = hiveService.countByApiary(apiary);
+            long productCount = honeyProductService.countProductsByApiary(apiary.getApiaryId());
 
-        Optional<ButtonType> result = confirmDialog.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
+            Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmDialog.setTitle("Delete Apiary");
+            confirmDialog.setHeaderText("Delete " + apiary.getName());
+
+            String message = "Are you sure you want to delete this apiary?\n\n" +
+                    "This will permanently delete:\n" +
+                    "• The apiary: " + apiary.getName() + "\n" +
+                    "• " + hiveCount + " hive(s)\n" +
+                    "• " + productCount + " honey product(s)\n\n" +
+                    "This action cannot be undone.";
+            confirmDialog.setContentText(message);
+
+            // Make the dialog larger to show all text
+            confirmDialog.getDialogPane().setPrefSize(400, 250);
+
+            Optional<ButtonType> result = confirmDialog.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                LOGGER.info("=== STARTING APIARY CASCADE DELETION ===");
+                LOGGER.info("Deleting apiary: " + apiary.getName() +
+                        " with " + hiveCount + " hives and " + productCount + " products");
+
                 boolean deleted = apiaryService.deleteApiary(apiary.getApiaryId());
 
                 if (deleted) {
-                    loadApiaries();
-                    showAlert(Alert.AlertType.INFORMATION, "Success",
-                            "Apiary deleted successfully.");
+                    LOGGER.info("=== APIARY CASCADE DELETION SUCCESSFUL ===");
+                    showAlert(Alert.AlertType.INFORMATION, "Deletion Successful",
+                            "Apiary '" + apiary.getName() + "' and all related data have been deleted successfully.\n" +
+                                    "All dashboards will be updated automatically.");
+
+                    // The observer pattern will handle the UI updates automatically
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "Error",
-                            "Failed to delete apiary.");
+                    LOGGER.warning("Apiary deletion failed");
+                    showAlert(Alert.AlertType.ERROR, "Deletion Failed",
+                            "Failed to delete apiary. Please try again.");
                 }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error deleting apiary", e);
-                showAlert(Alert.AlertType.ERROR, "Error",
-                        "Failed to delete apiary: " + e.getMessage());
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting apiary", e);
+            showAlert(Alert.AlertType.ERROR, "Error",
+                    "Failed to delete apiary: " + e.getMessage());
         }
     }
 
@@ -1422,22 +1445,85 @@ public class BeekeeperDashboardController implements Observer<EntityChangeEvent<
     }
 
     private void handleEntityChange(EntityChangeEvent<?> event) {
-        switch (event.getEntityType()) {
-            case "Apiary":
-                loadApiaries();
-                loadHives();
-                loadProducts();
-                break;
-            case "Hive":
-                loadHives();
-                loadProducts();
-                break;
-            case "HoneyProduct":
-                loadProducts();
-                break;
-            case "Order":
-                loadOrders();
-                break;
+        try {
+            LOGGER.info("=== BEEKEEPER DASHBOARD PROCESSING ENTITY CHANGE ===");
+            LOGGER.info("Event Type: " + event.getType() + " | Entity Type: " + event.getEntityType());
+
+            switch (event.getEntityType()) {
+                case "Apiary":
+                    LOGGER.info("Processing Apiary change event: " + event.getType());
+                    if (event.getType() == EntityChangeEvent.Type.DELETED) {
+                        LOGGER.info("Apiary deleted - refreshing all related data");
+                        // Refresh all data since apiary deletion cascades to everything
+                        loadApiaries();
+                        loadHives();
+                        loadProducts();
+                        loadOrders(); // Orders might be affected if they contain products from this apiary
+
+                        Platform.runLater(() -> {
+                            showTemporaryNotification("Apiary and all related data have been deleted.");
+                        });
+                    } else {
+                        loadApiaries();
+                        loadHives();
+                        loadProducts();
+                    }
+                    break;
+
+                case "Hive":
+                    LOGGER.info("Processing Hive change event: " + event.getType());
+                    loadHives();
+                    loadProducts(); // Hive changes affect products
+                    if (event.getType() == EntityChangeEvent.Type.DELETED) {
+                        Platform.runLater(() -> {
+                            showTemporaryNotification("Hive and related products have been updated.");
+                        });
+                    }
+                    break;
+
+                case "HoneyProduct":
+                    LOGGER.info("Processing HoneyProduct change event: " + event.getType());
+                    loadProducts();
+                    if (event.getType() == EntityChangeEvent.Type.DELETED) {
+                        Platform.runLater(() -> {
+                            showTemporaryNotification("Honey product has been removed.");
+                        });
+                    }
+                    break;
+
+                case "Order":
+                    LOGGER.info("Processing Order change event: " + event.getType());
+                    loadOrders();
+                    break;
+
+                default:
+                    LOGGER.info("Unknown entity type for beekeeper dashboard: " + event.getEntityType());
+                    break;
+            }
+
+            LOGGER.info("=== BEEKEEPER DASHBOARD ENTITY CHANGE PROCESSING COMPLETED ===");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error handling entity change in BeekeeperDashboard", e);
+            e.printStackTrace();
+        }
+    }
+
+    private void showTemporaryNotification(String message) {
+        try {
+            Alert notification = new Alert(Alert.AlertType.INFORMATION);
+            notification.setTitle("Update Notification");
+            notification.setHeaderText("Data Updated");
+            notification.setContentText(message);
+
+            Timeline timeline = new Timeline(new KeyFrame(
+                    Duration.seconds(3),
+                    e -> notification.close()
+            ));
+            timeline.play();
+
+            notification.show();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error showing notification", e);
         }
     }
 }

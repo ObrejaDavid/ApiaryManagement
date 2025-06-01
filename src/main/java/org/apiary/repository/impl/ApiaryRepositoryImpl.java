@@ -3,6 +3,7 @@ package org.apiary.repository.impl;
 import org.apiary.config.HibernateConfig;
 import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
+import org.apiary.model.Hive;
 import org.apiary.repository.interfaces.ApiaryRepository;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
@@ -55,6 +56,60 @@ public class ApiaryRepositoryImpl extends AbstractRepository<Integer, Apiary> im
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding apiaries by location: " + location, e);
             return List.of();
+        }
+    }
+
+    @Override
+    public List<Hive> findHivesByApiary(Apiary apiary) {
+        try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            Query<Hive> query = session.createQuery(
+                    "FROM Hive WHERE apiary.id = :apiaryId ORDER BY hiveNumber", Hive.class);
+            query.setParameter("apiaryId", apiary.getApiaryId());
+            return query.getResultList();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding hives by apiary: " + apiary.getApiaryId(), e);
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<Hive> findHivesByApiaryId(Integer apiaryId) {
+        try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            Query<Hive> query = session.createQuery(
+                    "FROM Hive WHERE apiary.id = :apiaryId ORDER BY hiveNumber", Hive.class);
+            query.setParameter("apiaryId", apiaryId);
+            return query.getResultList();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding hives by apiary ID: " + apiaryId, e);
+            return List.of();
+        }
+    }
+
+    @Override
+    public long countHivesByApiary(Apiary apiary) {
+        try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            Query<Long> query = session.createQuery(
+                    "SELECT COUNT(*) FROM Hive WHERE apiary.id = :apiaryId", Long.class);
+            query.setParameter("apiaryId", apiary.getApiaryId());
+            Long result = query.uniqueResult();
+            return result != null ? result : 0L;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error counting hives by apiary: " + apiary.getApiaryId(), e);
+            return 0L;
+        }
+    }
+
+    @Override
+    public long countHivesByApiaryId(Integer apiaryId) {
+        try (Session session = HibernateConfig.getSessionFactory().openSession()) {
+            Query<Long> query = session.createQuery(
+                    "SELECT COUNT(*) FROM Hive WHERE apiary.id = :apiaryId", Long.class);
+            query.setParameter("apiaryId", apiaryId);
+            Long result = query.uniqueResult();
+            return result != null ? result : 0L;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error counting hives by apiary ID: " + apiaryId, e);
+            return 0L;
         }
     }
 }

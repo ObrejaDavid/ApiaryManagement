@@ -24,10 +24,10 @@ public class Apiary {
     @JoinColumn(name = "beekeeperId", nullable = false)
     private Beekeeper beekeeper;
 
-    @OneToMany(mappedBy = "apiary", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "apiary", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Hive> hives = new ArrayList<>();
 
-    @OneToMany(mappedBy = "apiary", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "apiary", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<HoneyProduct> honeyProducts = new ArrayList<>();
 
     public Apiary() {}

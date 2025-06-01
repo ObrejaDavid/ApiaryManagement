@@ -269,24 +269,23 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
             switch (event.getEntityType()) {
                 case "HoneyProduct":
                     LOGGER.info("Processing HoneyProduct change event");
-
                     if (event.getEntity() instanceof HoneyProduct) {
                         HoneyProduct product = (HoneyProduct) event.getEntity();
-                        LOGGER.info("Updated product details - ID: " + product.getProductId() +
-                                " | Name: " + product.getName() +
-                                " | Price: " + product.getPrice() +
-                                " | Quantity: " + product.getQuantity());
+                        LOGGER.info("Product change: " + product.getName() +
+                                " | Event: " + event.getType());
                     }
 
                     // Force refresh products regardless of current tab
-                    LOGGER.info("Forcing product refresh...");
                     forceRefreshProducts();
 
-                    // Show notification to user
+                    // Show notification for product changes
                     Platform.runLater(() -> {
                         try {
-                            String message = event.getType() == EntityChangeEvent.Type.CREATED ?
-                                    "New honey product available!" : "Product information updated!";
+                            String message = switch (event.getType()) {
+                                case CREATED -> "New honey product available!";
+                                case UPDATED -> "Product information updated!";
+                                case DELETED -> "A product is no longer available.";
+                            };
                             showTemporaryNotification(message);
                         } catch (Exception e) {
                             LOGGER.log(Level.WARNING, "Error showing notification", e);
@@ -294,24 +293,35 @@ public class ClientDashboardController implements Observer<EntityChangeEvent<?>>
                     });
                     break;
 
+                case "Apiary":
+                    LOGGER.info("Processing Apiary change event: " + event.getType());
+                    if (event.getType() == EntityChangeEvent.Type.DELETED) {
+                        LOGGER.info("Apiary deleted - refreshing all related data");
+                        // Refresh all tabs since apiary deletion affects everything
+                        loadApiaries();
+                        forceRefreshProducts();
+
+                        Platform.runLater(() -> {
+                            showTemporaryNotification("An apiary and its products have been removed.");
+                        });
+                    } else {
+                        loadApiaries();
+                        forceRefreshProducts();
+                    }
+                    break;
+
+                case "Hive":
+                    LOGGER.info("Processing Hive change event: " + event.getType());
+                    loadApiaries(); // Update hive counts in apiary table
+                    forceRefreshProducts(); // Hive changes might affect products
+                    break;
+
                 case "Order":
                     LOGGER.info("Processing Order change event");
                     loadOrders();
                     if (event.getType() == EntityChangeEvent.Type.CREATED) {
-                        loadCartItems();
+                        loadCartItems(); // Clear cart after order creation
                     }
-                    break;
-
-                case "Apiary":
-                    LOGGER.info("Processing Apiary change event");
-                    loadApiaries();
-                    forceRefreshProducts();
-                    break;
-
-                case "Hive":
-                    LOGGER.info("Processing Hive change event");
-                    loadApiaries();
-                    forceRefreshProducts();
                     break;
 
                 case "CartItem":

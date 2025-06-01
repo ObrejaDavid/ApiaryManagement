@@ -36,6 +36,7 @@
 
     <bean id="apiaryService" class="org.apiary.service.impl.ApiaryServiceImpl">
         <constructor-arg ref="apiaryRepository"/>
+        <constructor-arg ref="honeyProductRepository"/>
     </bean>
 
     <bean id="hiveService" class="org.apiary.service.impl.HiveServiceImpl">

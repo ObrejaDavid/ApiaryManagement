@@ -2,6 +2,7 @@ package org.apiary.repository.interfaces;
 
 import org.apiary.model.Apiary;
 import org.apiary.model.Beekeeper;
+import org.apiary.model.Hive;
 
 import java.util.List;
 
@@ -26,4 +27,32 @@ public interface ApiaryRepository extends Repository<Integer, Apiary> {
      * @return A list of apiaries with matching locations
      */
     List<Apiary> findByLocationContaining(String location);
+
+    /**
+     * Find all hives in a specific apiary
+     * @param apiary The apiary
+     * @return A list of hives in the apiary
+     */
+    List<Hive> findHivesByApiary(Apiary apiary);
+
+    /**
+     * Find all hives in a specific apiary by apiary ID
+     * @param apiaryId The apiary ID
+     * @return A list of hives in the apiary
+     */
+    List<Hive> findHivesByApiaryId(Integer apiaryId);
+
+    /**
+     * Count the number of hives in an apiary
+     * @param apiary The apiary
+     * @return The number of hives in the apiary
+     */
+    long countHivesByApiary(Apiary apiary);
+
+    /**
+     * Count the number of hives in an apiary by apiary ID
+     * @param apiaryId The apiary ID
+     * @return The number of hives in the apiary
+     */
+    long countHivesByApiaryId(Integer apiaryId);
 }
